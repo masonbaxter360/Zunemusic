@@ -310,6 +310,27 @@
     <main id="touchViewport" class="flex-1 w-full relative overflow-hidden">
 
       <!-- ============================================================ -->
+      <!-- PIVOT 0: COLLECTION (Artists, Albums, Songs, Playlists)      -->
+      <!-- ============================================================ -->
+      <section id="pane-0" class="w-full h-full overflow-y-auto no-scrollbar px-4 pt-2 pb-24">
+        <!-- Active Artist / Album Filter Breadcrumb -->
+        <div id="activeFilterBanner" class="hidden mb-2 px-3 py-2 border flex items-center justify-between"
+             style="background-color: var(--bg-tile); border-color: var(--zune-pink);">
+          <span id="activeFilterText" class="text-xs font-bold uppercase tracking-wider" style="color: var(--zune-pink);">
+            artist
+          </span>
+          <button onclick="resetCollectionFilters()"
+                  class="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 border"
+                  style="border-color: var(--border-metro); color: var(--text-primary);">
+            show all ✕
+          </button>
+        </div>
+
+        <!-- Scrollable Collection List / Grid Container -->
+        <div id="collectionScrollArea"></div>
+      </section>
+
+      <!-- ============================================================ -->
       <!-- PIVOT 1: NOW PLAYING (WP7 / Nokia Music Artist Portrait UI)  -->
       <!-- ============================================================ -->
       <section id="pane-1" class="hidden w-full h-full relative overflow-hidden flex flex-col justify-between">
@@ -1837,6 +1858,7 @@
     function renderCollection() {
       const container = document.getElementById('collectionScrollArea');
       const filterBanner = document.getElementById('activeFilterBanner');
+      if (!container || !filterBanner) return;
 
       if (state.selectedArtist || state.selectedAlbum) {
         filterBanner.classList.remove('hidden');
@@ -2460,6 +2482,26 @@
     }
 
     window.addEventListener('DOMContentLoaded', async () => {
-      loadArtistPhotoCache();
-      document.getElementById('redirectUriInput').value = getRedirectUri();
-      const savedCid = localStorage.getItem('zune_mobile_spotify_cid') || 'aa5884864c9641b9b5a03f877dab5f0a';
+      try {
+        loadArtistPhotoCache();
+        const redirectInput = document.getElementById('redirectUriInput');
+        if (redirectInput) redirectInput.value = getRedirectUri();
+
+        const savedCid = localStorage.getItem('zune_mobile_spotify_cid') || 'aa5884864c9641b9b5a03f877dab5f0a';
+        const cidInput = document.getElementById('clientIdInput');
+        if (cidInput) cidInput.value = savedCid;
+
+        setCollectionTab('artists');
+        switchPanorama(0);
+        renderAll();
+        loadTrack(false);
+
+        await checkSpotifyOAuthCallback();
+      } catch (err) {
+        console.error('Zune initialization error:', err);
+        logDiag(`Init warning: ${err.message}`, true);
+      }
+    });
+  </script>
+</body>
+</html>
