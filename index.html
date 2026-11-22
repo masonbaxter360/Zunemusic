@@ -48,7 +48,6 @@
     * {
       box-sizing: border-box;
       -webkit-tap-highlight-color: transparent;
-      user-select: none;
       font-family: var(--font-zune);
     }
 
@@ -478,22 +477,6 @@
             <p id="spotifyErrorMessage" class="text-white/90 leading-relaxed"></p>
           </div>
 
-          <!-- iOS HOME SCREEN PWA HANDOFF BANNER (Appears in Safari sheet after PWA login) -->
-          <div id="pwaHandoffBanner" class="hidden p-4 border-2 space-y-2.5"
-               style="background-color: #140812; border-color: var(--zune-pink);">
-            <div class="text-[10px] font-bold uppercase tracking-widest text-white px-2 py-0.5 inline-block zune-gradient-bg">
-              iphone home screen bridge
-            </div>
-            <div class="metro-light-title text-xl text-white">Spotify Authorized!</div>
-            <p class="text-xs text-white/85 leading-relaxed">
-              iOS opened login in a separate Safari sheet. Tap below to copy your session key, then tap <strong>Done</strong> (top-left) to return to your Zune Home Screen app and tap <strong>Paste Session Key</strong>.
-            </p>
-            <button onclick="copyPwaSessionKey()" id="copyPwaKeyBtn"
-                    class="w-full py-2.5 text-xs font-bold uppercase tracking-widest text-white zune-gradient-bg metro-tile">
-              copy session key for zune app
-            </button>
-          </div>
-
           <!-- Status Card -->
           <div class="p-4 border" style="background-color: var(--bg-tile); border-color: var(--border-metro);">
             <div class="flex items-center justify-between">
@@ -509,15 +492,60 @@
               Connect your Spotify account via PKCE OAuth to import your Liked Songs, Albums, and Playlists into the Zune HD collection.
             </p>
 
-            <!-- Connected Action Buttons (Sync Now + Disconnect) -->
-            <div id="spotifyConnectedActions" class="hidden mt-3 flex items-center gap-2">
-              <button onclick="manualResyncSpotify()" id="syncNowBtn"
-                      class="flex-1 py-2 text-xs font-bold uppercase tracking-widest text-white zune-gradient-bg metro-tile">
-                ↻ sync library now
+            <!-- Connected Action Buttons (Sync Now + Disconnect + Permanent Copy Session Key) -->
+            <div id="spotifyConnectedActions" class="hidden mt-3 flex flex-col gap-2.5">
+              <div class="flex items-center gap-2">
+                <button onclick="manualResyncSpotify()" id="syncNowBtn"
+                        class="flex-1 py-2.5 text-xs font-bold uppercase tracking-widest text-white zune-gradient-bg metro-tile">
+                  ↻ sync library now
+                </button>
+                <button id="spotifyDisconnectBtn" onclick="disconnectSpotify()"
+                        class="px-3.5 py-2.5 text-xs font-bold uppercase tracking-wider border border-red-500/50 text-red-400 metro-tile">
+                  disconnect
+                </button>
+              </div>
+
+              <!-- ALWAYS-VISIBLE COPY SESSION KEY BUTTON FOR HOME SCREEN PWA -->
+              <button onclick="copyPwaSessionKey()" id="copyPwaKeyBtn"
+                      class="w-full py-2.5 text-xs font-bold uppercase tracking-widest border-2 text-white metro-tile"
+                      style="border-color: var(--zune-pink); background-color: rgba(236, 0, 140, 0.14);">
+                copy session key for home screen app
               </button>
-              <button id="spotifyDisconnectBtn" onclick="disconnectSpotify()"
-                      class="px-3 py-2 text-xs font-bold uppercase tracking-wider border border-red-500/50 text-red-400 metro-tile">
-                disconnect
+
+              <!-- Selectable Fallback Box (Appears automatically if iOS Safari blocks programmatic clipboard write) -->
+              <div id="sessionKeyFallbackBox" class="hidden space-y-1.5 pt-1">
+                <div class="text-[10px] font-bold uppercase tracking-wider" style="color: var(--zune-orange);">
+                  tap & hold below -> select all -> copy
+                </div>
+                <textarea id="sessionKeyTextarea" rows="3" readonly onclick="this.select()"
+                          class="w-full text-[11px] font-mono p-2 border outline-none select-all"
+                          style="background-color: var(--bg-pitch); border-color: var(--zune-pink); color: var(--text-primary);"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- iPhone Home Screen App Bridge (Paste Session Key from Safari) -->
+          <div id="pwaPasteBridgeBox" class="p-4 border space-y-2.5" style="background-color: var(--bg-tile); border-color: var(--border-metro);">
+            <div class="text-[11px] font-bold uppercase tracking-wider" style="color: var(--zune-pink);">
+              iPhone Home Screen App Bridge
+            </div>
+            <p class="text-[11px] leading-relaxed" style="color: var(--text-secondary);">
+              Logged in on Safari? Tap <strong>Copy Session Key for Home Screen App</strong> in Safari, open this Home Screen app, and tap below to import your session:
+            </p>
+            <button onclick="pastePwaSessionKey()"
+                    class="w-full py-2.5 text-xs font-bold uppercase tracking-widest text-white zune-gradient-bg metro-tile">
+              paste session key from clipboard
+            </button>
+
+            <!-- Manual Paste Fallback Input if Clipboard API is restricted on iOS -->
+            <div class="flex items-center gap-1.5 pt-1">
+              <input id="manualSessionKeyInput" type="text" placeholder="Or paste ZUNE_SPOTIFY:... key here"
+                     class="flex-1 text-[11px] font-mono px-2.5 py-2 border outline-none"
+                     style="background-color: var(--bg-pitch); border-color: var(--border-metro); color: var(--text-primary);" />
+              <button onclick="importManualSessionKey()"
+                      class="px-3 py-2 text-[11px] font-bold uppercase border shrink-0"
+                      style="border-color: var(--zune-pink); color: var(--zune-pink);">
+                load
               </button>
             </div>
           </div>
@@ -557,21 +585,6 @@
                     class="w-full py-3 text-xs font-bold uppercase tracking-widest text-white zune-gradient-bg metro-tile">
               connect spotify account →
             </button>
-
-            <!-- iOS Home Screen PWA Session Paste Bridge -->
-            <div id="pwaPasteBridgeBox" class="pt-2 border-t space-y-2" style="border-color: var(--border-metro);">
-              <div class="text-[10px] font-bold uppercase tracking-wider" style="color: var(--text-secondary);">
-                iPhone Home Screen App Bridge
-              </div>
-              <p class="text-[11px]" style="color: var(--text-secondary);">
-                If iOS opened login in a Safari popup sheet and you copied your Session Key, tap below to import it directly into this Home Screen app:
-              </p>
-              <button onclick="pastePwaSessionKey()"
-                      class="w-full py-2 text-[11px] font-bold uppercase tracking-wider border metro-tile"
-                      style="border-color: var(--zune-pink); color: var(--zune-pink);">
-                paste session key from clipboard
-              </button>
-            </div>
           </div>
 
           <!-- LIVE SYNC & DIAGNOSTICS LOG -->
@@ -930,8 +943,6 @@
     /*************************************************************************
      * 4. SPOTIFY SERVERLESS PKCE OAUTH & WEB PLAYBACK SDK (2026 + iOS PWA)
      *************************************************************************/
-    let latestPwaSessionBundle = '';
-
     function logDiag(msg, isError = false) {
       const box = document.getElementById('syncDiagLog');
       if (!box) return;
@@ -989,6 +1000,22 @@
       } catch (e) {
         return null;
       }
+    }
+
+    /**
+     * Dynamically builds the portable Base64 JSON session bundle from active storage/state
+     * so it is ALWAYS available whenever Spotify is connected in Safari.
+     */
+    function buildPortableSessionBundle() {
+      const token = state.spotifyToken || localStorage.getItem('zune_mobile_spotify_token');
+      if (!token) return '';
+      const payload = {
+        access_token: token,
+        refresh_token: localStorage.getItem('zune_mobile_spotify_refresh') || '',
+        expires_at: Number(localStorage.getItem('zune_mobile_spotify_exp') || (Date.now() + 3500000)),
+        client_id: localStorage.getItem('zune_mobile_spotify_cid') || document.getElementById('clientIdInput').value.trim()
+      };
+      return 'ZUNE_SPOTIFY:' + encodeStatePayload(payload);
     }
 
     function randomVerifier(len = 64) {
@@ -1073,7 +1100,6 @@
       if (code) {
         const clientId = (decodedState && decodedState.c) || localStorage.getItem('zune_mobile_spotify_cid');
         const verifier = (decodedState && decodedState.v) || localStorage.getItem('zune_mobile_spotify_verifier');
-        const launchedFromPwa = decodedState && decodedState.m === 'pwa';
 
         window.history.replaceState({}, document.title, getRedirectUri());
 
@@ -1113,20 +1139,6 @@
           localStorage.setItem('zune_mobile_spotify_exp', String(expiresAt));
           if (tokenData.refresh_token) {
             localStorage.setItem('zune_mobile_spotify_refresh', tokenData.refresh_token);
-          }
-
-          // Prepare portable session bundle for iOS Home Screen PWA <-> Safari bridge
-          latestPwaSessionBundle = 'ZUNE_SPOTIFY:' + encodeStatePayload({
-            t: tokenData.access_token,
-            r: tokenData.refresh_token || '',
-            e: expiresAt,
-            c: clientId
-          });
-
-          if (launchedFromPwa && !isStandalonePwa()) {
-            document.getElementById('pwaHandoffBanner').classList.remove('hidden');
-            logDiag('Authorized inside iOS Safari sheet. Session key ready for Home Screen PWA.');
-            switchPanorama(3);
           }
 
           await hydrateSpotifySession(tokenData.access_token);
@@ -1179,17 +1191,74 @@
     }
 
     function copyPwaSessionKey() {
-      if (!latestPwaSessionBundle) return;
-      const temp = document.createElement('textarea');
-      temp.value = latestPwaSessionBundle;
-      document.body.appendChild(temp);
-      temp.select();
-      document.execCommand('copy');
-      document.body.removeChild(temp);
+      const bundle = buildPortableSessionBundle();
+      if (!bundle) {
+        showToast('No active Spotify session to copy');
+        return;
+      }
+
+      // Populate selectable fallback box immediately so user always has access even if iOS Safari restricts execCommand
+      const fallbackBox = document.getElementById('sessionKeyFallbackBox');
+      const textarea = document.getElementById('sessionKeyTextarea');
+      textarea.value = bundle;
+      fallbackBox.classList.remove('hidden');
+
+      let copied = false;
+      try {
+        textarea.focus();
+        textarea.select();
+        textarea.setSelectionRange(0, bundle.length);
+        copied = document.execCommand('copy');
+      } catch (e) {
+        copied = false;
+      }
+
+      if (!copied && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(bundle).catch(() => {});
+      }
 
       const btn = document.getElementById('copyPwaKeyBtn');
-      btn.textContent = 'copied! now tap "done" top-left';
-      showToast('Session Key copied — tap Done to return to Zune app');
+      btn.textContent = 'copied! open home screen zune app & paste';
+      setTimeout(() => {
+        btn.textContent = 'copy session key for home screen app';
+      }, 4000);
+
+      logDiag('Generated portable Session Key for Home Screen PWA.');
+      showToast('Session Key copied! Switch to Home Screen Zune app & tap Paste');
+    }
+
+    function applyImportedSessionPayload(raw) {
+      const cleaned = (raw || '').trim();
+      if (!cleaned || !cleaned.startsWith('ZUNE_SPOTIFY:')) {
+        showSpotifyError(
+          'Invalid Session Key',
+          'Make sure you copied the full key starting with "ZUNE_SPOTIFY:" from Safari.'
+        );
+        return false;
+      }
+
+      const payload = decodeStatePayload(cleaned.replace('ZUNE_SPOTIFY:', ''));
+      const accessToken = payload?.access_token || payload?.t;
+      const refreshToken = payload?.refresh_token || payload?.r || '';
+      const expiresAt = payload?.expires_at || payload?.e || (Date.now() + 3500000);
+      const clientId = payload?.client_id || payload?.c || '';
+
+      if (!accessToken) {
+        showSpotifyError('Corrupt Session Key', 'Session key could not be decoded. Tap Copy Session Key in Safari again.');
+        return false;
+      }
+
+      localStorage.setItem('zune_mobile_spotify_token', accessToken);
+      localStorage.setItem('zune_mobile_spotify_exp', String(expiresAt));
+      if (refreshToken) localStorage.setItem('zune_mobile_spotify_refresh', refreshToken);
+      if (clientId) {
+        localStorage.setItem('zune_mobile_spotify_cid', clientId);
+        document.getElementById('clientIdInput').value = clientId;
+      }
+
+      logDiag('Imported Session Key into Home Screen PWA!');
+      hydrateSpotifySession(accessToken);
+      return true;
     }
 
     async function pastePwaSessionKey() {
@@ -1199,30 +1268,26 @@
         if (navigator.clipboard && navigator.clipboard.readText) {
           raw = await navigator.clipboard.readText();
         }
-        if (!raw || !raw.startsWith('ZUNE_SPOTIFY:')) {
+        if (!raw) {
           showSpotifyError(
-            'No Session Key in Clipboard',
-            'Tap "Connect Spotify Account", complete login in the popup sheet, tap "Copy Session Key for Zune App", tap Done, and then tap Paste Session Key.'
+            'Clipboard Empty or Blocked by iOS',
+            'If iOS blocked automatic clipboard read, paste the ZUNE_SPOTIFY:... key into the box right below the button and tap Load.'
           );
           return;
         }
-        const payload = decodeStatePayload(raw.replace('ZUNE_SPOTIFY:', '').trim());
-        if (!payload || !payload.t) {
-          showSpotifyError('Invalid Session Key', 'Clipboard text could not be decoded. Try copying the session key again.');
-          return;
-        }
-        localStorage.setItem('zune_mobile_spotify_token', payload.t);
-        localStorage.setItem('zune_mobile_spotify_exp', String(payload.e || (Date.now() + 3500000)));
-        if (payload.r) localStorage.setItem('zune_mobile_spotify_refresh', payload.r);
-        if (payload.c) {
-          localStorage.setItem('zune_mobile_spotify_cid', payload.c);
-          document.getElementById('clientIdInput').value = payload.c;
-        }
-        logDiag('Imported Session Key into Home Screen PWA!');
-        await hydrateSpotifySession(payload.t);
+        applyImportedSessionPayload(raw);
       } catch (e) {
-        showSpotifyError('Clipboard Access Blocked', 'iOS blocked automatic clipboard read: ' + (e.message || 'Permission denied'));
+        showSpotifyError(
+          'Paste Into Manual Box Below',
+          'iOS Safari blocked direct clipboard read. Tap inside the "Or paste ZUNE_SPOTIFY:... key here" box below, tap Paste, and tap Load.'
+        );
       }
+    }
+
+    function importManualSessionKey() {
+      hideSpotifyError();
+      const val = document.getElementById('manualSessionKeyInput').value;
+      applyImportedSessionPayload(val);
     }
 
     async function manualResyncSpotify() {
@@ -1270,7 +1335,7 @@
         document.getElementById('spotifyConnPill').textContent = `● ${displayName}`;
         document.getElementById('spotifyConnPill').style.color = '#1DB954';
         document.getElementById('spotifyHubHeading').textContent = `Synced: ${displayName}`;
-        document.getElementById('spotifyHubSub').textContent = 'Connected to Spotify Web API. Tap Sync Library Now anytime to refresh your tracks.';
+        document.getElementById('spotifyHubSub').textContent = 'Connected to Spotify Web API. Tap Copy Session Key below to transfer this login to your Home Screen app.';
         document.getElementById('spotifyConnectedActions').classList.remove('hidden');
 
         await syncSpotifyLibraryData(token);
@@ -1326,7 +1391,7 @@
         logDiag(`/me/tracks returned HTTP ${tracksRes.status}`, true);
       }
 
-      // 2. Saved Albums (extract tracks so saved albums populate collection too)
+      // 2. Saved Albums
       if (albumsRes.ok) {
         const albumsJson = await albumsRes.json();
         const albItems = albumsJson.items || [];
@@ -1362,7 +1427,6 @@
           cover: p.images?.[0]?.url || DEMO_TRACKS[0].cover
         }));
 
-        // If Liked Songs + Saved Albums returned fewer than 10 tracks, automatically pull tracks from user's playlists!
         const userId = state.spotifyUser?.id;
         const ownedPlaylists = state.playlists.filter(p => !userId || p.ownerId === userId).slice(0, 3);
 
@@ -1497,7 +1561,7 @@
       document.getElementById('spotifyConnPill').style.color = 'var(--text-secondary)';
       document.getElementById('spotifyHubHeading').textContent = 'Sync Your Spotify Library';
       document.getElementById('spotifyConnectedActions').classList.add('hidden');
-      document.getElementById('pwaHandoffBanner').classList.add('hidden');
+      document.getElementById('sessionKeyFallbackBox').classList.add('hidden');
 
       logDiag('Disconnected Spotify. Restored Zune demo tracks.');
       renderAll();
@@ -1511,7 +1575,6 @@
     function switchPanorama(idx) {
       state.activePane = Math.max(0, Math.min(3, idx));
 
-      // Update Clipped Panorama Header Typography & Smooth Scroll Position
       const headerTrack = document.getElementById('panoramaHeaderTrack');
       const headers = headerTrack.querySelectorAll('.metro-pivot-header');
       headers.forEach((btn, i) => {
@@ -1525,25 +1588,20 @@
         }
       });
 
-      // Show active view pane
       for (let i = 0; i < 4; i++) {
         document.getElementById(`pane-${i}`).classList.toggle('hidden', i !== state.activePane);
       }
 
-      // Show sub-tabs only on Collection pivot
       document.getElementById('collectionSubTabs').classList.toggle('hidden', state.activePane !== 0);
-
-      // Hide bottom mini-player when full-screen Now Playing pivot is active
       document.getElementById('miniPlayerBar').classList.toggle('hidden', state.activePane === 1);
     }
 
-    // Horizontal Swipe Support on Mobile Touch Viewport
     let touchStartX = 0;
     let touchStartY = 0;
     const touchViewport = document.getElementById('touchViewport');
 
     touchViewport.addEventListener('touchstart', e => {
-      if (e.target.closest('input[type="range"]')) return;
+      if (e.target.closest('input[type="range"]') || e.target.closest('textarea') || e.target.closest('input[type="text"]')) return;
       touchStartX = e.changedTouches[0].screenX;
       touchStartY = e.changedTouches[0].screenY;
     }, { passive: true });
@@ -1555,7 +1613,6 @@
       touchStartX = 0;
       touchStartY = 0;
 
-      // Trigger panorama slide on deliberate horizontal swipe
       if (Math.abs(dx) > 52 && Math.abs(dx) > Math.abs(dy) * 1.4) {
         if (dx < 0 && state.activePane < 3) {
           switchPanorama(state.activePane + 1);
@@ -1783,7 +1840,6 @@
       renderCollection();
     }
 
-    // Windows Phone 7 / Zune Alphabetical Jump-Grid Overlay
     function openAlphaJump() {
       const availableLetters = new Set(state.library.map(t => t.artist[0].toLowerCase()));
       const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
@@ -1814,6 +1870,18 @@
     /*************************************************************************
      * 7. SMART DJ / QUICKPLAY LIVE TILES & NOW PLAYING MOSAIC
      *************************************************************************/
+    function startSmartMix(mode) {
+      let pool = [...state.library];
+      if (mode === 'favorites') {
+        const favs = state.library.filter(t => state.favorites.has(t.id));
+        if (favs.length) pool = favs;
+      }
+      state.queue = pool.sort(() => Math.random() - 0.5);
+      state.currentIndex = 0;
+      loadTrack(true);
+      switchPanorama(1);
+    }
+
     function renderSmartDjHub() {
       document.getElementById('tileTotalSongs').textContent = `${state.library.length} tracks ready`;
       document.getElementById('tileFavCount').textContent = `${state.favorites.size} favorites`;
@@ -1834,7 +1902,6 @@
         </button>
       `).join('');
 
-      // Pinned / Recent Albums
       const seenAlbums = new Set();
       const albums = [];
       state.library.forEach(t => {
@@ -1916,12 +1983,10 @@
       state.positionMs = 0;
       state.durationMs = track.durationMs || 180000;
 
-      // Update Mini Player
       document.getElementById('miniCover').src = track.cover;
       document.getElementById('miniTitle').textContent = track.title;
       document.getElementById('miniArtist').textContent = track.artist;
 
-      // Update Full-Screen Now Playing
       document.getElementById('npBackdropImg').src = track.cover;
       document.getElementById('npMainCover').src = track.cover;
       document.getElementById('npArtistText').textContent = track.artist.toLowerCase();
