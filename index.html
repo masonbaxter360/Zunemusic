@@ -30,7 +30,7 @@
       --zune-pink: #EC008C;
       --zune-orange: #F26522;
       --zune-gradient: linear-gradient(135deg, #EC008C 0%, #F26522 100%);
-      --scrim-gradient: linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.72) 55%, rgba(0,0,0,0.96) 100%);
+      --scrim-gradient: linear-gradient(180deg, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.10) 35%, rgba(0,0,0,0.68) 65%, rgba(0,0,0,0.92) 100%);
     }
 
     body.theme-light {
@@ -42,7 +42,7 @@
       --text-secondary: #5E5E62;
       --text-dim: #A0A0A5;
       --border-metro: #DCDCE0;
-      --scrim-gradient: linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.82) 55%, rgba(255,255,255,0.97) 100%);
+      --scrim-gradient: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.15) 35%, rgba(255,255,255,0.78) 65%, rgba(255,255,255,0.95) 100%);
     }
 
     * {
@@ -310,85 +310,77 @@
     <main id="touchViewport" class="flex-1 w-full relative overflow-hidden">
 
       <!-- ============================================================ -->
-      <!-- PIVOT 0: COLLECTION (Metro Lists + Alphabet Jump Squares)    -->
-      <!-- ============================================================ -->
-      <section id="pane-0" class="w-full h-full flex flex-col overflow-hidden">
-        <!-- Active Filter Pill if Artist or Album selected -->
-        <div id="activeFilterBanner" class="hidden px-4 py-2 flex items-center justify-between text-xs border-b"
-             style="background-color: var(--bg-surface); border-color: var(--border-metro);">
-          <span id="activeFilterText" class="font-semibold truncate" style="color: var(--zune-pink);"></span>
-          <button onclick="resetCollectionFilters()" class="uppercase text-[10px] font-bold tracking-wider px-2 py-0.5 border"
-                  style="border-color: var(--border-metro);">show all</button>
-        </div>
-
-        <!-- Scrollable Collection List / Grid -->
-        <div id="collectionScrollArea" class="flex-1 overflow-y-auto no-scrollbar px-4 pt-2 pb-24">
-          <!-- Populated dynamically based on sub-tab -->
-        </div>
-      </section>
-
-      <!-- ============================================================ -->
-      <!-- PIVOT 1: NOW PLAYING (Full-Screen Mobile Zune HD Canvas)     -->
+      <!-- PIVOT 1: NOW PLAYING (WP7 / Nokia Music Artist Portrait UI)  -->
       <!-- ============================================================ -->
       <section id="pane-1" class="hidden w-full h-full relative overflow-hidden flex flex-col justify-between">
-        <!-- Live Panning / Drifting Album Art Wallpaper -->
+        <!-- Live Full-Bleed Artist Portrait / Album / Mosaic Wallpaper -->
         <div class="absolute inset-0 overflow-hidden pointer-events-none">
-          <img id="npBackdropImg" src="" alt="" class="w-full h-full object-cover opacity-45 zune-pan-backdrop" />
+          <img id="npBackdropImg" src="" alt=""
+               class="w-full h-full object-cover opacity-80 zune-pan-backdrop transition-opacity duration-500"
+               style="object-position: center 20%;" />
           <!-- Optional Mosaic Overlay Mode -->
-          <div id="npMosaicGrid" class="hidden absolute inset-0 grid grid-cols-3 gap-1 opacity-35"></div>
+          <div id="npMosaicGrid" class="hidden absolute inset-0 grid grid-cols-3 gap-1 opacity-40"></div>
           <div class="absolute inset-0" style="background: var(--scrim-gradient);"></div>
         </div>
 
-        <!-- Top Now Playing Controls (Mosaic toggle & Up Next Queue trigger) -->
+        <!-- Top Now Playing Controls (Wallpaper mode & Up Next Queue trigger) -->
         <div class="relative z-10 px-4 pt-2 flex items-center justify-between">
-          <button onclick="toggleMosaicMode()" id="mosaicModeBtn"
-                  class="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 border backdrop-blur-sm"
-                  style="border-color: var(--border-metro); color: var(--text-secondary);">
-            wallpaper: cover
+          <button onclick="cycleBackdropMode()" id="mosaicModeBtn"
+                  class="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 border"
+                  style="border-color: rgba(255,255,255,0.22); background-color: rgba(0,0,0,0.45); color: var(--text-primary);">
+            wallpaper: artist photo
           </button>
 
           <button onclick="openQueueDrawer()"
-                  class="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 border backdrop-blur-sm flex items-center gap-1.5"
-                  style="border-color: var(--border-metro); color: var(--text-primary);">
+                  class="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 border flex items-center gap-1.5"
+                  style="border-color: rgba(255,255,255,0.22); background-color: rgba(0,0,0,0.45); color: var(--text-primary);">
             <span>up next</span>
             <span id="npQueueCount" class="px-1.5 py-0.2 text-white zune-gradient-bg">0</span>
           </button>
         </div>
 
-        <!-- Center Crisp Square Album Artwork -->
-        <div class="relative z-10 px-6 my-auto flex flex-col items-center">
-          <div class="relative w-56 h-56 sm:w-64 sm:h-64 shadow-2xl border" style="border-color: rgba(255,255,255,0.14);">
-            <img id="npMainCover" src="" alt="Album Cover" class="w-full h-full object-cover" />
-            <!-- Zune Signature Accent Bar -->
-            <div class="h-1 w-full zune-gradient-bg"></div>
-          </div>
-        </div>
+        <!-- Open Upper Portrait Window (lets full-bleed artist face shine) -->
+        <div class="flex-1 pointer-events-none"></div>
 
-        <!-- Bottom Metadata, Seek Bar & Circular Metro Transport Controls -->
-        <div class="relative z-10 px-5 pb-5 pt-2 flex flex-col gap-3">
-          <!-- Artist & Track Typography + Heart -->
-          <div class="flex items-end justify-between gap-3">
-            <div class="min-w-0 flex-1">
-              <div id="npArtistText" class="metro-light-title text-3xl sm:text-4xl truncate leading-tight" style="color: var(--text-primary);">
-                artist name
-              </div>
-              <div id="npSongText" class="text-base font-semibold truncate mt-0.5 zune-gradient-text">
+        <!-- Bottom-Anchored WP7 / Nokia Music Metadata, Seek Bar & Circular Transport Controls -->
+        <div class="relative z-10 px-5 pb-5 pt-2 flex flex-col gap-3.5">
+          <!-- Bottom-Left Sharp Square Album Cover + Right-Aligned Song Title & Artist -->
+          <div class="flex items-center gap-3.5">
+            <!-- Left: Sharp 92x92 Square Album Cover -->
+            <div class="relative w-[92px] h-[92px] shrink-0 shadow-2xl border"
+                 style="border-color: rgba(255,255,255,0.22); border-radius: 0px;">
+              <img id="npMainCover" src="" alt="Album Cover" class="w-full h-full object-cover" />
+              <div class="h-[3px] w-full zune-gradient-bg absolute bottom-0 left-0"></div>
+            </div>
+
+            <!-- Right: Clean White Song Title on Top + Light Artist Name Underneath -->
+            <div class="min-w-0 flex-1 flex flex-col justify-center">
+              <div id="npSongText"
+                   class="text-[22px] sm:text-[24px] font-semibold leading-snug line-clamp-2"
+                   style="color: var(--text-primary); text-shadow: 0 1px 10px rgba(0,0,0,0.65);">
                 song title
               </div>
-              <div id="npAlbumText" class="text-xs uppercase tracking-wider truncate mt-0.5" style="color: var(--text-secondary);">
+              <div id="npArtistText"
+                   class="metro-light-title text-[15px] truncate mt-0.5"
+                   style="color: rgba(255,255,255,0.82); text-shadow: 0 1px 8px rgba(0,0,0,0.65);">
+                artist name
+              </div>
+              <div id="npAlbumText"
+                   class="text-[11px] uppercase tracking-wider truncate mt-1"
+                   style="color: var(--text-secondary);">
                 album · year
               </div>
             </div>
 
             <!-- Heart / Favorite Square Button -->
             <button onclick="toggleFavoriteCurrent()" id="npFavoriteBtn"
-                    class="w-11 h-11 shrink-0 border flex items-center justify-center text-xl metro-tile"
-                    style="border-color: var(--border-metro); background-color: var(--bg-tile);">
+                    class="w-10 h-10 shrink-0 border flex items-center justify-center text-lg metro-tile self-start mt-1"
+                    style="border-color: rgba(255,255,255,0.22); background-color: rgba(0,0,0,0.45);">
               ♡
             </button>
           </div>
 
-          <!-- Interactive Seek Bar with Elapsed & Remaining Time -->
+          <!-- Full-Width Thin Zune Magenta Progress Seek Bar -->
           <div class="flex flex-col gap-0.5">
             <div class="relative w-full flex items-center">
               <input id="npSeekSlider" type="range" min="0" max="1000" value="0"
@@ -403,8 +395,8 @@
             </div>
           </div>
 
-          <!-- Authentic Zune Circular Outline Transport Buttons -->
-          <div class="flex items-center justify-between px-1 pt-1">
+          <!-- Authentic Zune / WP7 Circular Outline Transport Buttons -->
+          <div class="flex items-center justify-between px-1 pt-0.5">
             <!-- Shuffle -->
             <button id="shuffleBtn" onclick="toggleShuffle()" title="Shuffle"
                     class="w-9 h-9 rounded-full border flex items-center justify-center transition-colors"
@@ -771,6 +763,44 @@
       return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
     }
 
+    /**
+     * Generates dramatic editorial monochrome/duotone studio artist portraits
+     * for the built-in demo artists so the WP7 Now Playing backdrop looks distinct
+     * from the square album cover.
+     */
+    function createDemoArtistPortraitSVG(artistName, accentColor = '#EC008C') {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1100" viewBox="0 0 800 1100">
+        <defs>
+          <radialGradient id="studioGlow" cx="50%" cy="28%" r="65%">
+            <stop offset="0%" stop-color="#3A3A40"/>
+            <stop offset="55%" stop-color="#18181B"/>
+            <stop offset="100%" stop-color="#050507"/>
+          </radialGradient>
+          <linearGradient id="rimLight" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="${accentColor}" stop-opacity="0.35"/>
+            <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <rect width="800" height="1100" fill="url(#studioGlow)"/>
+        <rect width="800" height="1100" fill="url(#rimLight)"/>
+        <!-- Editorial Studio Silhouette Portrait -->
+        <circle cx="400" cy="340" r="142" fill="#27272A" stroke="#52525B" stroke-width="3"/>
+        <path d="M165 920 C175 630, 270 535, 400 535 C530 535, 625 630, 635 920 Z" fill="#1F1F23" stroke="#3F3F46" stroke-width="3"/>
+        <path d="M330 540 L400 660 L470 540" fill="none" stroke="${accentColor}" stroke-width="4" stroke-opacity="0.55"/>
+        <text x="400" y="130" text-anchor="middle" fill="#FFFFFF" fill-opacity="0.12" font-family="'Segoe UI Light', 'Selawik', sans-serif" font-weight="200" font-size="68" letter-spacing="8">${artistName.toUpperCase()}</text>
+      </svg>`;
+      return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+    }
+
+    const DEMO_ARTIST_PORTRAITS = {
+      'Interpolations': createDemoArtistPortraitSVG('Interpolations', '#DC2626'),
+      'The Strokes & Co.': createDemoArtistPortraitSVG('The Strokes', '#2563EB'),
+      'Zune HD Collective': createDemoArtistPortraitSVG('Zune HD', '#EC008C'),
+      'Bloc Theory': createDemoArtistPortraitSVG('Bloc Theory', '#F26522'),
+      'Yeah Yeah Echoes': createDemoArtistPortraitSVG('Yeah Yeah', '#DB2777'),
+      'Cascadia Analog': createDemoArtistPortraitSVG('Cascadia', '#0D9488')
+    };
+
     const DEMO_TRACKS = [
       {
         id: 'z1',
@@ -892,10 +922,10 @@
       shuffle: false,
       repeat: false,
       volume: 0.8,
-      positionMs: 0,
-      durationMs: DEMO_TRACKS[0].durationMs,
+      durationMs: 180000,
       isScrubbing: false,
-      mosaicMode: false,
+      backdropMode: 'artist', // 'artist' | 'album' | 'mosaic'
+      artistPhotoCache: {},
       favorites: new Set(['z1', 'z5', 'z7']),
       history: [DEMO_TRACKS[0], DEMO_TRACKS[2], DEMO_TRACKS[4]],
       // Spotify PKCE & Web Playback SDK
@@ -1387,6 +1417,7 @@
 
     function mapSpotifyTrackObj(t, fallbackCover) {
       if (!t || !t.id) return null;
+      const primaryArtist = Array.isArray(t.artists) && t.artists.length ? t.artists[0] : null;
       const artists = Array.isArray(t.artists) && t.artists.length
         ? t.artists.map(a => a.name).join(', ')
         : 'Unknown Artist';
@@ -1398,11 +1429,122 @@
         uri: t.uri || `spotify:track:${t.id}`,
         title: t.name || 'Untitled Track',
         artist: artists,
+        primaryArtistName: primaryArtist?.name || artists.split(',')[0].trim(),
+        artistId: primaryArtist?.id || null,
         album: albumName,
         year,
         durationMs: t.duration_ms || 180000,
         cover
       };
+    }
+
+    /*************************************************************************
+     * 4B. MULTI-SOURCE ARTIST PORTRAIT METADATA RETRIEVAL & CACHING
+     *************************************************************************/
+    function loadArtistPhotoCache() {
+      try {
+        const raw = localStorage.getItem('zune_artist_photo_cache_v1');
+        if (raw) state.artistPhotoCache = JSON.parse(raw);
+      } catch (e) {
+        state.artistPhotoCache = {};
+      }
+    }
+
+    function saveArtistPhotoCache() {
+      try {
+        const keys = Object.keys(state.artistPhotoCache);
+        if (keys.length > 120) {
+          delete state.artistPhotoCache[keys[0]];
+        }
+        localStorage.setItem('zune_artist_photo_cache_v1', JSON.stringify(state.artistPhotoCache));
+      } catch (e) {}
+    }
+
+    function fetchDeezerArtistJsonp(artistName) {
+      return new Promise(resolve => {
+        const cbName = 'zuneDzCb_' + Math.random().toString(36).slice(2, 9);
+        const script = document.createElement('script');
+        const timeout = setTimeout(() => {
+          cleanup();
+          resolve(null);
+        }, 4500);
+
+        function cleanup() {
+          clearTimeout(timeout);
+          delete window[cbName];
+          if (script.parentNode) script.parentNode.removeChild(script);
+        }
+
+        window[cbName] = data => {
+          cleanup();
+          const first = data?.data?.[0];
+          const url = first?.picture_xl || first?.picture_big || first?.picture_medium || null;
+          resolve(url);
+        };
+
+        script.onerror = () => {
+          cleanup();
+          resolve(null);
+        };
+        script.src = `https://api.deezer.com/search/artist?q=${encodeURIComponent(artistName)}&output=jsonp&callback=${cbName}`;
+        document.body.appendChild(script);
+      });
+    }
+
+    async function fetchArtistPhoto(artistName, spotifyArtistId) {
+      const cleanName = (artistName || '').split(',')[0].trim();
+      if (!cleanName) return null;
+
+      const cacheKey = spotifyArtistId ? `sp:${spotifyArtistId}` : `name:${cleanName.toLowerCase()}`;
+      if (state.artistPhotoCache[cacheKey]) {
+        return state.artistPhotoCache[cacheKey];
+      }
+
+      // 1. Built-in curated portrait for Demo Artists
+      if (DEMO_ARTIST_PORTRAITS[cleanName]) {
+        state.artistPhotoCache[cacheKey] = DEMO_ARTIST_PORTRAITS[cleanName];
+        return DEMO_ARTIST_PORTRAITS[cleanName];
+      }
+
+      let resolvedUrl = null;
+
+      // 2. Spotify Web API Artist Endpoint (highest accuracy when connected)
+      if (state.spotifyConnected && state.spotifyToken && spotifyArtistId) {
+        try {
+          const res = await fetch(`https://api.spotify.com/v1/artists/${spotifyArtistId}`, {
+            headers: { Authorization: `Bearer ${state.spotifyToken}` }
+          });
+          if (res.ok) {
+            const artistData = await res.json();
+            if (Array.isArray(artistData.images) && artistData.images.length > 0) {
+              resolvedUrl = artistData.images[0].url;
+            }
+          }
+        } catch (e) {}
+      }
+
+      // 3. TheAudioDB Public Metadata API
+      if (!resolvedUrl) {
+        try {
+          const adbRes = await fetch(`https://www.theaudiodb.com/api/v1/json/2/search.php?s=${encodeURIComponent(cleanName)}`);
+          if (adbRes.ok) {
+            const adbData = await adbRes.json();
+            const artistObj = adbData?.artists?.[0];
+            resolvedUrl = artistObj?.strArtistThumb || artistObj?.strArtistFanart || artistObj?.strArtistFanart2 || null;
+          }
+        } catch (e) {}
+      }
+
+      // 4. Deezer Public Artist Search JSONP (1000x1000 picture_xl)
+      if (!resolvedUrl) {
+        resolvedUrl = await fetchDeezerArtistJsonp(cleanName);
+      }
+
+      if (resolvedUrl) {
+        state.artistPhotoCache[cacheKey] = resolvedUrl;
+        saveArtistPhotoCache();
+      }
+      return resolvedUrl;
     }
 
     async function syncSpotifyLibraryData(token) {
@@ -1974,11 +2116,49 @@
       grid.innerHTML = html;
     }
 
-    function toggleMosaicMode() {
-      state.mosaicMode = !state.mosaicMode;
-      document.getElementById('npMosaicGrid').classList.toggle('hidden', !state.mosaicMode);
-      document.getElementById('npBackdropImg').classList.toggle('hidden', state.mosaicMode);
-      document.getElementById('mosaicModeBtn').textContent = state.mosaicMode ? 'wallpaper: mosaic' : 'wallpaper: cover';
+    async function applyNowPlayingBackdrop(track) {
+      if (!track) return;
+      const backdropImg = document.getElementById('npBackdropImg');
+      const mosaicGrid = document.getElementById('npMosaicGrid');
+      const modeBtn = document.getElementById('mosaicModeBtn');
+
+      if (state.backdropMode === 'mosaic') {
+        mosaicGrid.classList.remove('hidden');
+        backdropImg.classList.add('hidden');
+        modeBtn.textContent = 'wallpaper: mosaic';
+        return;
+      }
+
+      mosaicGrid.classList.add('hidden');
+      backdropImg.classList.remove('hidden');
+
+      if (state.backdropMode === 'album') {
+        modeBtn.textContent = 'wallpaper: album art';
+        backdropImg.style.objectPosition = 'center center';
+        backdropImg.src = track.cover;
+        return;
+      }
+
+      // Default: 'artist' (WP7 / Nokia Music full-bleed artist portrait)
+      modeBtn.textContent = 'wallpaper: artist photo';
+      backdropImg.style.objectPosition = 'center 20%';
+      // Set immediate fallback while resolving artist portrait asynchronously
+      backdropImg.src = DEMO_ARTIST_PORTRAITS[track.primaryArtistName || track.artist] || track.cover;
+
+      const lookupName = track.primaryArtistName || track.artist;
+      const portraitUrl = await fetchArtistPhoto(lookupName, track.artistId);
+      const currentTrack = state.queue[state.currentIndex];
+      if (portraitUrl && currentTrack && currentTrack.id === track.id && state.backdropMode === 'artist') {
+        backdropImg.src = portraitUrl;
+      }
+    }
+
+    function cycleBackdropMode() {
+      const modes = ['artist', 'album', 'mosaic'];
+      const nextIdx = (modes.indexOf(state.backdropMode) + 1) % modes.length;
+      state.backdropMode = modes[nextIdx];
+      const track = state.queue[state.currentIndex];
+      if (track) applyNowPlayingBackdrop(track);
     }
 
     function openQueueDrawer() {
@@ -2026,12 +2206,12 @@
       document.getElementById('miniTitle').textContent = track.title;
       document.getElementById('miniArtist').textContent = track.artist;
 
-      document.getElementById('npBackdropImg').src = track.cover;
       document.getElementById('npMainCover').src = track.cover;
-      document.getElementById('npArtistText').textContent = track.artist.toLowerCase();
       document.getElementById('npSongText').textContent = track.title;
+      document.getElementById('npArtistText').textContent = track.artist;
       document.getElementById('npAlbumText').textContent = `${track.album} · ${track.year}`;
       document.getElementById('npQueueCount').textContent = state.queue.length;
+      applyNowPlayingBackdrop(track);
 
       updateHeartUI();
       updateSeekUI();
@@ -2280,16 +2460,6 @@
     }
 
     window.addEventListener('DOMContentLoaded', async () => {
+      loadArtistPhotoCache();
       document.getElementById('redirectUriInput').value = getRedirectUri();
       const savedCid = localStorage.getItem('zune_mobile_spotify_cid') || 'aa5884864c9641b9b5a03f877dab5f0a';
-      document.getElementById('clientIdInput').value = savedCid;
-
-      setCollectionTab('artists');
-      switchPanorama(0);
-      renderAll();
-      loadTrack(false);
-      await checkSpotifyOAuthCallback();
-    });
-  </script>
-</body>
-</html>
