@@ -1,0 +1,1793 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Zune HD — Music + Videos Hub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Open-source metric-compatible fallback for Segoe UI on non-Windows mobile devices -->
+  <link rel="stylesheet" href="https://fontlibrary.org//face/selawik" type="text/css"/>
+  <!-- Spotify Web Playback SDK -->
+  <script src="https://sdk.scdn.co/spotify-player.js"></script>
+
+  <style>
+    :root {
+      --font-zune: 'Segoe UI', 'Selawik', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-zune-light: 'Segoe UI Light', 'Segoe UI', 'Selawik Light', 'Selawik', -apple-system, BlinkMacSystemFont, sans-serif;
+      --bg-pitch: #000000;
+      --bg-surface: #0D0D0D;
+      --bg-tile: #141414;
+      --bg-tile-hover: #1E1E1E;
+      --text-primary: #FFFFFF;
+      --text-secondary: #8E8E93;
+      --text-dim: #48484A;
+      --border-metro: #242426;
+      --zune-pink: #EC008C;
+      --zune-orange: #F26522;
+      --zune-gradient: linear-gradient(135deg, #EC008C 0%, #F26522 100%);
+      --scrim-gradient: linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.72) 55%, rgba(0,0,0,0.96) 100%);
+    }
+
+    body.theme-light {
+      --bg-pitch: #FFFFFF;
+      --bg-surface: #F5F5F5;
+      --bg-tile: #EBEBEB;
+      --bg-tile-hover: #E0E0E0;
+      --text-primary: #000000;
+      --text-secondary: #5E5E62;
+      --text-dim: #A0A0A5;
+      --border-metro: #DCDCE0;
+      --scrim-gradient: linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.82) 55%, rgba(255,255,255,0.97) 100%);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      font-family: var(--font-zune);
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #070707;
+      color: var(--text-primary);
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Mobile Device Frame on Desktop, Full-Bleed on Mobile */
+    #mobileShell {
+      width: 100%;
+      height: 100dvh;
+      max-width: 440px;
+      margin: 0 auto;
+      background-color: var(--bg-pitch);
+      color: var(--text-primary);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    @media (min-width: 520px) {
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(circle at 50% 30%, #191118 0%, #050505 100%);
+      }
+      #mobileShell {
+        height: min(880px, 95dvh);
+        border: 1px solid #262629;
+        box-shadow: 0 32px 80px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(236, 0, 140, 0.14);
+      }
+    }
+
+    /* Authentic Zune HD / Metro Typography */
+    .metro-hub-kicker {
+      font-family: var(--font-zune);
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .metro-pivot-header {
+      font-family: var(--font-zune-light);
+      font-weight: 200;
+      font-size: 46px;
+      line-height: 0.96;
+      letter-spacing: -0.04em;
+      text-transform: lowercase;
+      white-space: nowrap;
+      transition: color 0.24s cubic-bezier(0.16, 1, 0.3, 1), transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .metro-sub-tab {
+      font-family: var(--font-zune);
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: 0.03em;
+      text-transform: lowercase;
+      transition: color 0.15s ease;
+    }
+
+    .metro-light-title {
+      font-family: var(--font-zune-light);
+      font-weight: 200;
+      letter-spacing: -0.03em;
+    }
+
+    /* Kinetic Metro Tile Press Physics (Sharp 0px corners) */
+    .metro-tile {
+      border-radius: 0px;
+      transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.16s ease;
+    }
+    .metro-tile:active {
+      transform: perspective(600px) rotateX(2deg) scale(0.965);
+    }
+
+    /* Hide Scrollbars cleanly for touch panning */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Zune Gradient Accents */
+    .zune-gradient-bg {
+      background: var(--zune-gradient);
+    }
+    .zune-gradient-text {
+      background: var(--zune-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Zune HD Now Playing Panning Backdrop Animation */
+    @keyframes zuneSlowPan {
+      0% { transform: scale(1.16) translate3d(0%, 0%, 0); }
+      33% { transform: scale(1.24) translate3d(-4%, -3%, 0); }
+      66% { transform: scale(1.20) translate3d(3%, -4%, 0); }
+      100% { transform: scale(1.16) translate3d(0%, 0%, 0); }
+    }
+    .zune-pan-backdrop {
+      animation: zuneSlowPan 26s ease-in-out infinite;
+    }
+
+    /* Metro Range Slider (Sharp Zune Seek Bar) */
+    input[type="range"].zune-seek {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+      height: 22px;
+    }
+    input[type="range"].zune-seek::-webkit-slider-runnable-track {
+      height: 3px;
+      background: rgba(142, 142, 147, 0.32);
+    }
+    input[type="range"].zune-seek::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 0px;
+      background: var(--text-primary);
+      border: 2px solid var(--zune-pink);
+      margin-top: -4.5px;
+    }
+
+    /* Slide-Up Queue Drawer Transition */
+    #queueDrawer {
+      transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- MOBILE ZUNE HD / METRO SHELL -->
+  <div id="mobileShell">
+
+    <!-- TOP STATUS & ZUNE HUB KICKER BAR -->
+    <header class="pt-3 px-4 pb-1 z-20 shrink-0" style="background-color: var(--bg-pitch);">
+      <div class="flex items-center justify-between mb-1.5">
+        <div class="flex items-center gap-2">
+          <!-- Zune Emblem -->
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+            <path d="M4 4H20L12 12L20 20H4L12 12L4 4Z" stroke="url(#zuneMobileGrad)" stroke-width="2.5" stroke-linejoin="round"/>
+            <defs>
+              <linearGradient id="zuneMobileGrad" x1="4" y1="4" x2="20" y2="20" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#EC008C"/>
+                <stop offset="1" stop-color="#F26522"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <span class="metro-hub-kicker" style="color: var(--text-primary);">music + videos</span>
+        </div>
+
+        <!-- Right Quick Status Actions -->
+        <div class="flex items-center gap-2">
+          <button id="audioModeBadge" onclick="switchPanorama(3)"
+                  class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 border"
+                  style="border-color: var(--border-metro); color: var(--zune-pink);">
+            demo synth
+          </button>
+          <button onclick="toggleTheme()" title="Toggle Pitch Black / Crisp Light"
+                  class="w-6 h-6 flex items-center justify-center border text-[11px]"
+                  style="border-color: var(--border-metro); color: var(--text-secondary);">
+            ◐
+          </button>
+        </div>
+      </div>
+
+      <!-- CLIPPED HORIZONTAL PANORAMA / PIVOT HEADERS (Swipeable & Tappable) -->
+      <div id="panoramaHeaderTrack" class="flex items-baseline gap-6 overflow-x-auto no-scrollbar py-1">
+        <button onclick="switchPanorama(0)" data-idx="0" class="metro-pivot-header shrink-0">collection</button>
+        <button onclick="switchPanorama(1)" data-idx="1" class="metro-pivot-header shrink-0">now playing</button>
+        <button onclick="switchPanorama(2)" data-idx="2" class="metro-pivot-header shrink-0">smart dj</button>
+        <button onclick="switchPanorama(3)" data-idx="3" class="metro-pivot-header shrink-0 pr-16">spotify</button>
+      </div>
+
+      <!-- CONTEXTUAL SUB-PIVOTS (Visible for Collection) -->
+      <div id="collectionSubTabs" class="flex items-center justify-between pt-2 pb-1.5 border-b" style="border-color: var(--border-metro);">
+        <div class="flex items-center gap-5">
+          <button onclick="setCollectionTab('artists')" data-sub="artists" class="metro-sub-tab">artists</button>
+          <button onclick="setCollectionTab('albums')" data-sub="albums" class="metro-sub-tab">albums</button>
+          <button onclick="setCollectionTab('songs')" data-sub="songs" class="metro-sub-tab">songs</button>
+          <button onclick="setCollectionTab('playlists')" data-sub="playlists" class="metro-sub-tab">playlists</button>
+        </div>
+        <button onclick="toggleSearchBar()" class="p-1" style="color: var(--text-secondary);" title="Search">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Collapsible Metro Search Input -->
+      <div id="mobileSearchBox" class="hidden pt-2 pb-1">
+        <div class="flex items-center gap-2">
+          <input id="searchInput" type="text" placeholder="filter artists, albums, songs..."
+                 oninput="handleSearch(this.value)"
+                 class="w-full text-sm px-3 py-2 border outline-none"
+                 style="background-color: var(--bg-tile); border-color: var(--zune-pink); color: var(--text-primary); border-radius: 0px;" />
+          <button onclick="clearSearch()" class="px-3 py-2 text-xs font-bold uppercase border"
+                  style="border-color: var(--border-metro); color: var(--text-secondary);">✕</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN SWIPEABLE PANORAMA VIEWPORT -->
+    <main id="touchViewport" class="flex-1 w-full relative overflow-hidden">
+
+      <!-- ============================================================ -->
+      <!-- PIVOT 0: COLLECTION (Metro Lists + Alphabet Jump Squares)    -->
+      <!-- ============================================================ -->
+      <section id="pane-0" class="w-full h-full flex flex-col overflow-hidden">
+        <!-- Active Filter Pill if Artist or Album selected -->
+        <div id="activeFilterBanner" class="hidden px-4 py-2 flex items-center justify-between text-xs border-b"
+             style="background-color: var(--bg-surface); border-color: var(--border-metro);">
+          <span id="activeFilterText" class="font-semibold truncate" style="color: var(--zune-pink);"></span>
+          <button onclick="resetCollectionFilters()" class="uppercase text-[10px] font-bold tracking-wider px-2 py-0.5 border"
+                  style="border-color: var(--border-metro);">show all</button>
+        </div>
+
+        <!-- Scrollable Collection List / Grid -->
+        <div id="collectionScrollArea" class="flex-1 overflow-y-auto no-scrollbar px-4 pt-2 pb-24">
+          <!-- Populated dynamically based on sub-tab -->
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PIVOT 1: NOW PLAYING (Full-Screen Mobile Zune HD Canvas)     -->
+      <!-- ============================================================ -->
+      <section id="pane-1" class="hidden w-full h-full relative overflow-hidden flex flex-col justify-between">
+        <!-- Live Panning / Drifting Album Art Wallpaper -->
+        <div class="absolute inset-0 overflow-hidden pointer-events-none">
+          <img id="npBackdropImg" src="" alt="" class="w-full h-full object-cover opacity-45 zune-pan-backdrop" />
+          <!-- Optional Mosaic Overlay Mode -->
+          <div id="npMosaicGrid" class="hidden absolute inset-0 grid grid-cols-3 gap-1 opacity-35"></div>
+          <div class="absolute inset-0" style="background: var(--scrim-gradient);"></div>
+        </div>
+
+        <!-- Top Now Playing Controls (Mosaic toggle & Up Next Queue trigger) -->
+        <div class="relative z-10 px-4 pt-2 flex items-center justify-between">
+          <button onclick="toggleMosaicMode()" id="mosaicModeBtn"
+                  class="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 border backdrop-blur-sm"
+                  style="border-color: var(--border-metro); color: var(--text-secondary);">
+            wallpaper: cover
+          </button>
+
+          <button onclick="openQueueDrawer()"
+                  class="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 border backdrop-blur-sm flex items-center gap-1.5"
+                  style="border-color: var(--border-metro); color: var(--text-primary);">
+            <span>up next</span>
+            <span id="npQueueCount" class="px-1.5 py-0.2 text-white zune-gradient-bg">0</span>
+          </button>
+        </div>
+
+        <!-- Center Crisp Square Album Artwork -->
+        <div class="relative z-10 px-6 my-auto flex flex-col items-center">
+          <div class="relative w-56 h-56 sm:w-64 sm:h-64 shadow-2xl border" style="border-color: rgba(255,255,255,0.14);">
+            <img id="npMainCover" src="" alt="Album Cover" class="w-full h-full object-cover" />
+            <!-- Zune Signature Accent Bar -->
+            <div class="h-1 w-full zune-gradient-bg"></div>
+          </div>
+        </div>
+
+        <!-- Bottom Metadata, Seek Bar & Circular Metro Transport Controls -->
+        <div class="relative z-10 px-5 pb-5 pt-2 flex flex-col gap-3">
+          <!-- Artist & Track Typography + Heart -->
+          <div class="flex items-end justify-between gap-3">
+            <div class="min-w-0 flex-1">
+              <div id="npArtistText" class="metro-light-title text-3xl sm:text-4xl truncate leading-tight" style="color: var(--text-primary);">
+                artist name
+              </div>
+              <div id="npSongText" class="text-base font-semibold truncate mt-0.5 zune-gradient-text">
+                song title
+              </div>
+              <div id="npAlbumText" class="text-xs uppercase tracking-wider truncate mt-0.5" style="color: var(--text-secondary);">
+                album · year
+              </div>
+            </div>
+
+            <!-- Heart / Favorite Square Button -->
+            <button onclick="toggleFavoriteCurrent()" id="npFavoriteBtn"
+                    class="w-11 h-11 shrink-0 border flex items-center justify-center text-xl metro-tile"
+                    style="border-color: var(--border-metro); background-color: var(--bg-tile);">
+              ♡
+            </button>
+          </div>
+
+          <!-- Interactive Seek Bar with Elapsed & Remaining Time -->
+          <div class="flex flex-col gap-0.5">
+            <div class="relative w-full flex items-center">
+              <input id="npSeekSlider" type="range" min="0" max="1000" value="0"
+                     oninput="handleScrubInput(this.value)"
+                     onchange="handleScrubCommit(this.value)"
+                     class="zune-seek w-full z-10" />
+              <div id="npSeekFill" class="absolute left-0 h-[3px] pointer-events-none zune-gradient-bg" style="width: 0%;"></div>
+            </div>
+            <div class="flex justify-between text-[11px] font-mono" style="color: var(--text-secondary);">
+              <span id="npElapsed">0:00</span>
+              <span id="npRemaining">-0:00</span>
+            </div>
+          </div>
+
+          <!-- Authentic Zune Circular Outline Transport Buttons -->
+          <div class="flex items-center justify-between px-1 pt-1">
+            <!-- Shuffle -->
+            <button id="shuffleBtn" onclick="toggleShuffle()" title="Shuffle"
+                    class="w-9 h-9 rounded-full border flex items-center justify-center transition-colors"
+                    style="border-color: var(--border-metro); color: var(--text-secondary);">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+                <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
+              </svg>
+            </button>
+
+            <!-- Previous -->
+            <button onclick="prevTrack()" title="Previous"
+                    class="w-12 h-12 rounded-full border-2 flex items-center justify-center active:scale-90 transition-transform"
+                    style="border-color: var(--text-primary); color: var(--text-primary);">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+              </svg>
+            </button>
+
+            <!-- Play / Pause (Hero Circular Button) -->
+            <button onclick="togglePlayPause()" title="Play / Pause"
+                    class="w-16 h-16 rounded-full border-2 flex items-center justify-center active:scale-95 transition-transform shadow-lg"
+                    style="border-color: var(--text-primary); color: var(--text-primary);">
+              <svg id="npPlayIcon" class="w-7 h-7 ml-1" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+              <svg id="npPauseIcon" class="w-7 h-7 hidden" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+              </svg>
+            </button>
+
+            <!-- Next -->
+            <button onclick="nextTrack()" title="Next"
+                    class="w-12 h-12 rounded-full border-2 flex items-center justify-center active:scale-90 transition-transform"
+                    style="border-color: var(--text-primary); color: var(--text-primary);">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+              </svg>
+            </button>
+
+            <!-- Repeat -->
+            <button id="repeatBtn" onclick="toggleRepeat()" title="Repeat"
+                    class="w-9 h-9 rounded-full border flex items-center justify-center transition-colors"
+                    style="border-color: var(--border-metro); color: var(--text-secondary);">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PIVOT 2: SMART DJ / QUICKPLAY (Metro Live-Tile Grid)         -->
+      <!-- ============================================================ -->
+      <section id="pane-2" class="hidden w-full h-full overflow-y-auto no-scrollbar px-4 pt-2 pb-24">
+        <!-- Quick Action Hero Live Tiles -->
+        <div class="grid grid-cols-2 gap-2.5 mb-5">
+          <button onclick="playShuffledAll()"
+                  class="metro-tile h-28 p-3.5 text-left flex flex-col justify-between text-white zune-gradient-bg">
+            <span class="text-[10px] font-bold uppercase tracking-widest opacity-85">instant mix</span>
+            <div>
+              <div class="metro-light-title text-2xl leading-none">shuffle all</div>
+              <div class="text-[11px] opacity-85 mt-1" id="tileTotalSongs">10 tracks ready</div>
+            </div>
+          </button>
+
+          <button onclick="startSmartMix('favorites')"
+                  class="metro-tile h-28 p-3.5 text-left flex flex-col justify-between border"
+                  style="background-color: var(--bg-tile); border-color: var(--border-metro);">
+            <span class="text-[10px] font-bold uppercase tracking-widest" style="color: var(--zune-pink);">smart dj</span>
+            <div>
+              <div class="metro-light-title text-2xl leading-none">hearted</div>
+              <div class="text-[11px] mt-1" style="color: var(--text-secondary);" id="tileFavCount">3 favorites</div>
+            </div>
+          </button>
+        </div>
+
+        <!-- Smart DJ Curated Channels -->
+        <div class="text-[11px] font-bold uppercase tracking-widest mb-2" style="color: var(--text-secondary);">
+          smart dj channels
+        </div>
+        <div class="grid grid-cols-2 gap-2.5 mb-5" id="smartDjGrid">
+          <!-- Populated dynamically -->
+        </div>
+
+        <!-- Pinned / Recent Albums Live Tiles -->
+        <div class="text-[11px] font-bold uppercase tracking-widest mb-2" style="color: var(--text-secondary);">
+          pinned & recent rotation
+        </div>
+        <div class="grid grid-cols-2 gap-2.5" id="pinnedAlbumsGrid">
+          <!-- Populated dynamically -->
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PIVOT 3: SPOTIFY SYNC HUB (Serverless PKCE OAuth + SDK)      -->
+      <!-- ============================================================ -->
+      <section id="pane-3" class="hidden w-full h-full overflow-y-auto no-scrollbar px-4 pt-2 pb-24">
+        <div class="flex flex-col gap-4">
+          <!-- Status Card -->
+          <div class="p-4 border" style="background-color: var(--bg-tile); border-color: var(--border-metro);">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 text-white zune-gradient-bg">
+                zune + spotify bridge
+              </span>
+              <span id="spotifyConnPill" class="text-[11px] font-semibold" style="color: var(--text-secondary);">
+                ● demo mode
+              </span>
+            </div>
+            <h2 class="metro-light-title text-2xl mt-2" id="spotifyHubHeading">Sync Your Spotify Library</h2>
+            <p class="text-xs mt-1 leading-relaxed" style="color: var(--text-secondary);" id="spotifyHubSub">
+              Connect your Spotify account via serverless PKCE OAuth to import your Saved Tracks, Albums, and Playlists into the Zune HD interface.
+            </p>
+
+            <button id="spotifyDisconnectBtn" onclick="disconnectSpotify()"
+                    class="hidden mt-3 px-3 py-1.5 text-xs font-bold uppercase tracking-wider border border-red-500/40 text-red-400">
+              disconnect spotify
+            </button>
+          </div>
+
+          <!-- Redirect URI Box -->
+          <div class="p-4 border space-y-2" style="background-color: var(--bg-tile); border-color: var(--border-metro);">
+            <div class="text-[11px] font-bold uppercase tracking-wider" style="color: var(--zune-orange);">
+              1. Spotify Developer Redirect URI
+            </div>
+            <p class="text-[11px]" style="color: var(--text-secondary);">
+              Add this exact URL in your <a href="https://developer.spotify.com/dashboard" target="_blank" class="underline" style="color: var(--text-primary);">Spotify Dashboard</a> app settings:
+            </p>
+            <div class="flex items-center gap-1.5">
+              <input id="redirectUriInput" type="text" readonly
+                     class="flex-1 text-[11px] font-mono px-2.5 py-2 border outline-none"
+                     style="background-color: var(--bg-pitch); border-color: var(--border-metro); color: var(--text-primary);" />
+              <button onclick="copyRedirectUri()" id="copyUriBtn"
+                      class="px-3 py-2 text-[11px] font-bold uppercase text-white zune-gradient-bg shrink-0">
+                copy
+              </button>
+            </div>
+          </div>
+
+          <!-- Client ID & Connect Action -->
+          <div class="p-4 border space-y-3" style="background-color: var(--bg-tile); border-color: var(--border-metro);">
+            <div class="text-[11px] font-bold uppercase tracking-wider" style="color: var(--zune-pink);">
+              2. Authorize Spotify Account
+            </div>
+            <div>
+              <label for="clientIdInput" class="block text-xs mb-1" style="color: var(--text-secondary);">Spotify App Client ID</label>
+              <input id="clientIdInput" type="text" placeholder="Paste your 32-char Client ID..."
+                     class="w-full text-xs font-mono px-3 py-2.5 border outline-none focus:border-[#EC008C]"
+                     style="background-color: var(--bg-pitch); border-color: var(--border-metro); color: var(--text-primary);" />
+            </div>
+
+            <button onclick="initiateSpotifyPKCE()"
+                    class="w-full py-3 text-xs font-bold uppercase tracking-widest text-white zune-gradient-bg metro-tile">
+              connect spotify account →
+            </button>
+          </div>
+
+          <!-- Volume Control for Mobile Web Audio / SDK -->
+          <div class="p-4 border space-y-2" style="background-color: var(--bg-tile); border-color: var(--border-metro);">
+            <div class="flex justify-between text-[11px] font-bold uppercase tracking-wider" style="color: var(--text-secondary);">
+              <span>master output volume</span>
+              <span id="volumePctLabel">80%</span>
+            </div>
+            <input id="volumeSlider" type="range" min="0" max="100" value="80"
+                   oninput="handleVolumeChange(this.value)"
+                   class="zune-seek w-full" />
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ============================================================ -->
+    <!-- PERSISTENT MINI NOW-PLAYING BAR (Visible outside Now Playing) -->
+    <!-- ============================================================ -->
+    <div id="miniPlayerBar" onclick="switchPanorama(1)"
+         class="relative z-30 border-t px-3 py-2 flex items-center justify-between gap-3 cursor-pointer shrink-0"
+         style="background-color: var(--bg-surface); border-color: var(--border-metro);">
+      <!-- Top Thin Progress Indicator -->
+      <div class="absolute top-0 left-0 right-0 h-[2px]" style="background-color: var(--border-metro);">
+        <div id="miniProgressLine" class="h-full zune-gradient-bg" style="width: 0%;"></div>
+      </div>
+
+      <div class="flex items-center gap-3 min-w-0 flex-1">
+        <img id="miniCover" src="" alt="" class="w-11 h-11 object-cover shrink-0 border" style="border-color: var(--border-metro);" />
+        <div class="min-w-0 flex-1">
+          <div id="miniTitle" class="text-sm font-semibold truncate">Redmond Midnight</div>
+          <div id="miniArtist" class="text-xs truncate" style="color: var(--text-secondary);">The Zune Collective</div>
+        </div>
+      </div>
+
+      <!-- Mini Circular Controls -->
+      <div class="flex items-center gap-2 shrink-0" onclick="event.stopPropagation()">
+        <button onclick="togglePlayPause()"
+                class="w-10 h-10 rounded-full border-2 flex items-center justify-center active:scale-90 transition-transform"
+                style="border-color: var(--text-primary); color: var(--text-primary);">
+          <svg id="miniPlayIcon" class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+          <svg id="miniPauseIcon" class="w-4 h-4 hidden" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+          </svg>
+        </button>
+
+        <button onclick="nextTrack()"
+                class="w-9 h-9 rounded-full border flex items-center justify-center active:scale-90 transition-transform"
+                style="border-color: var(--border-metro); color: var(--text-primary);">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- WINDOWS PHONE 7 / ZUNE ALPHABETICAL QUICK-JUMP OVERLAY       -->
+    <!-- ============================================================ -->
+    <div id="alphaJumpOverlay" class="hidden absolute inset-0 z-40 p-6 flex flex-col justify-between backdrop-blur-md"
+         style="background-color: rgba(0, 0, 0, 0.92);">
+      <div class="flex items-center justify-between">
+        <span class="metro-hub-kicker" style="color: var(--zune-pink);">jump to letter</span>
+        <button onclick="closeAlphaJump()" class="w-9 h-9 border flex items-center justify-center text-white" style="border-color: var(--border-metro);">✕</button>
+      </div>
+      <div id="alphaJumpGrid" class="grid grid-cols-4 gap-2.5 my-auto">
+        <!-- Letters a-z populated dynamically -->
+      </div>
+      <div class="text-[11px] text-center" style="color: var(--text-secondary);">tap an available Zune letter square to jump</div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- UP NEXT QUEUE DRAWER (Slide-up sheet inside Now Playing)     -->
+    <!-- ============================================================ -->
+    <div id="queueDrawer" class="absolute inset-0 z-40 translate-y-full flex flex-col"
+         style="background-color: var(--bg-pitch);">
+      <div class="px-4 py-3.5 border-b flex items-center justify-between" style="border-color: var(--border-metro);">
+        <div>
+          <div class="metro-hub-kicker" style="color: var(--zune-pink);">now playing</div>
+          <div class="metro-light-title text-2xl">up next queue</div>
+        </div>
+        <button onclick="closeQueueDrawer()" class="px-3 py-1.5 text-xs font-bold uppercase border" style="border-color: var(--border-metro);">
+          close
+        </button>
+      </div>
+      <div id="queueDrawerList" class="flex-1 overflow-y-auto no-scrollbar px-4 py-2 divide-y" style="border-color: var(--border-metro);">
+        <!-- Queue rows populated dynamically -->
+      </div>
+    </div>
+
+    <!-- MOBILE TOAST MESSAGE -->
+    <div id="zuneToast" class="absolute bottom-20 left-4 right-4 z-50 px-4 py-2.5 text-xs font-semibold text-white zune-gradient-bg opacity-0 pointer-events-none transition-opacity duration-200 shadow-xl">
+      Toast message
+    </div>
+
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- JAVASCRIPT: MOBILE ZUNE HD ENGINE, SYNTH & SPOTIFY PKCE      -->
+  <!-- ============================================================ -->
+  <script>
+    /*************************************************************************
+     * 1. CURATED DEMO CATALOG & SHARP GEOMETRIC SVG ALBUM ARTWORK
+     *************************************************************************/
+    function createMetroCoverSVG(title, artist, c1, c2, styleIdx = 0) {
+      const shapes = [
+        `<rect x="140" y="0" width="160" height="160" fill="${c2}" fill-opacity="0.5"/><circle cx="80" cy="210" r="65" fill="#ffffff" fill-opacity="0.16"/>`,
+        `<polygon points="0,300 300,40 300,300" fill="${c2}" fill-opacity="0.55"/><rect x="24" y="24" width="90" height="90" stroke="#ffffff" stroke-opacity="0.3" stroke-width="10" fill="none"/>`,
+        `<circle cx="150" cy="135" r="88" stroke="#ffffff" stroke-opacity="0.25" stroke-width="16" fill="none"/><rect x="0" y="220" width="300" height="80" fill="#000000" fill-opacity="0.35"/>`,
+        `<rect x="0" y="0" width="150" height="300" fill="${c2}" fill-opacity="0.4"/><polygon points="150,0 300,150 150,300" fill="#ffffff" fill-opacity="0.14"/>`
+      ];
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300">
+        <defs>
+          <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="${c1}"/>
+            <stop offset="100%" stop-color="${c2}"/>
+          </linearGradient>
+        </defs>
+        <rect width="300" height="300" fill="url(#bg)"/>
+        ${shapes[styleIdx % shapes.length]}
+        <text x="18" y="252" fill="#ffffff" font-family="'Segoe UI Light', 'Segoe UI', 'Selawik', sans-serif" font-weight="200" font-size="28" letter-spacing="-1">${title}</text>
+        <text x="20" y="276" fill="#ffffff" fill-opacity="0.85" font-family="'Segoe UI', 'Selawik', sans-serif" font-weight="700" font-size="10" letter-spacing="2">${artist.toUpperCase()}</text>
+      </svg>`;
+      return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+    }
+
+    const DEMO_TRACKS = [
+      {
+        id: 'z1',
+        title: 'Obstacle in the Rain',
+        artist: 'Interpolations',
+        album: 'Turn On The Bright Lights',
+        year: '2002',
+        durationMs: 214000,
+        cover: createMetroCoverSVG('Bright Lights', 'Interpolations', '#B91C1C', '#111827', 0),
+        synth: { root: 196.00, scale: [0, 3, 7, 10, 12, 15], tempo: 124, wave: 'triangle' }
+      },
+      {
+        id: 'z2',
+        title: 'NYC Subway Static',
+        artist: 'Interpolations',
+        album: 'Turn On The Bright Lights',
+        year: '2002',
+        durationMs: 198000,
+        cover: createMetroCoverSVG('Bright Lights', 'Interpolations', '#B91C1C', '#111827', 0),
+        synth: { root: 220.00, scale: [0, 3, 5, 7, 10, 12], tempo: 118, wave: 'sine' }
+      },
+      {
+        id: 'z3',
+        title: 'Modern Age Velvet',
+        artist: 'The Strokes & Co.',
+        album: 'Is This It',
+        year: '2001',
+        durationMs: 189000,
+        cover: createMetroCoverSVG('Is This It', 'The Strokes & Co.', '#1D4ED8', '#F59E0B', 1),
+        synth: { root: 246.94, scale: [0, 4, 7, 9, 12, 16], tempo: 128, wave: 'triangle' }
+      },
+      {
+        id: 'z4',
+        title: 'Last Nite at Redmond',
+        artist: 'The Strokes & Co.',
+        album: 'Is This It',
+        year: '2001',
+        durationMs: 197000,
+        cover: createMetroCoverSVG('Is This It', 'The Strokes & Co.', '#1D4ED8', '#F59E0B', 1),
+        synth: { root: 261.63, scale: [0, 2, 4, 7, 9, 12], tempo: 122, wave: 'triangle' }
+      },
+      {
+        id: 'z5',
+        title: 'Redmond OLED Glow',
+        artist: 'Zune HD Collective',
+        album: 'Tegra 2009',
+        year: '2009',
+        durationMs: 226000,
+        cover: createMetroCoverSVG('Tegra 2009', 'Zune HD Collective', '#EC008C', '#F26522', 2),
+        synth: { root: 220.00, scale: [0, 3, 7, 10, 14], tempo: 110, wave: 'sine' }
+      },
+      {
+        id: 'z6',
+        title: 'Metro Panorama',
+        artist: 'Zune HD Collective',
+        album: 'Tegra 2009',
+        year: '2009',
+        durationMs: 205000,
+        cover: createMetroCoverSVG('Tegra 2009', 'Zune HD Collective', '#EC008C', '#F26522', 2),
+        synth: { root: 174.61, scale: [0, 4, 7, 11, 14], tempo: 104, wave: 'triangle' }
+      },
+      {
+        id: 'z7',
+        title: 'Helicopter Wires',
+        artist: 'Bloc Theory',
+        album: 'Silent Alarm',
+        year: '2005',
+        durationMs: 211000,
+        cover: createMetroCoverSVG('Silent Alarm', 'Bloc Theory', '#374151', '#EC008C', 3),
+        synth: { root: 293.66, scale: [0, 2, 5, 7, 9, 12], tempo: 132, wave: 'triangle' }
+      },
+      {
+        id: 'z8',
+        title: 'Banquet in Pitch Black',
+        artist: 'Bloc Theory',
+        album: 'Silent Alarm',
+        year: '2005',
+        durationMs: 196000,
+        cover: createMetroCoverSVG('Silent Alarm', 'Bloc Theory', '#374151', '#EC008C', 3),
+        synth: { root: 196.00, scale: [0, 3, 5, 7, 10], tempo: 126, wave: 'sine' }
+      },
+      {
+        id: 'z9',
+        title: 'Maps of Seattle',
+        artist: 'Yeah Yeah Echoes',
+        album: 'Fever To Tell',
+        year: '2003',
+        durationMs: 219000,
+        cover: createMetroCoverSVG('Fever To Tell', 'Yeah Yeah Echoes', '#BE185D', '#F26522', 0),
+        synth: { root: 246.94, scale: [0, 3, 7, 10, 12], tempo: 108, wave: 'sine' }
+      },
+      {
+        id: 'z10',
+        title: 'Elliott Bay Ferry',
+        artist: 'Cascadia Analog',
+        album: '520 Floating Bridge',
+        year: '2010',
+        durationMs: 232000,
+        cover: createMetroCoverSVG('520 Bridge', 'Cascadia Analog', '#0F766E', '#F26522', 2),
+        synth: { root: 164.81, scale: [0, 3, 7, 10, 14], tempo: 98, wave: 'sine' }
+      }
+    ];
+
+    /*************************************************************************
+     * 2. MOBILE APP STATE
+     *************************************************************************/
+    const state = {
+      darkMode: true,
+      activePane: 0, // 0: collection, 1: now playing, 2: smart dj, 3: spotify
+      collectionTab: 'artists', // artists, albums, songs, playlists
+      selectedArtist: null,
+      selectedAlbum: null,
+      searchQuery: '',
+      library: [...DEMO_TRACKS],
+      playlists: [],
+      queue: [...DEMO_TRACKS],
+      currentIndex: 0,
+      isPlaying: false,
+      shuffle: false,
+      repeat: false,
+      volume: 0.8,
+      positionMs: 0,
+      durationMs: DEMO_TRACKS[0].durationMs,
+      isScrubbing: false,
+      mosaicMode: false,
+      favorites: new Set(['z1', 'z5', 'z7']),
+      history: [DEMO_TRACKS[0], DEMO_TRACKS[2], DEMO_TRACKS[4]],
+      // Spotify PKCE & Web Playback SDK
+      spotifyConnected: false,
+      spotifyToken: null,
+      spotifyUser: null,
+      spotifyDeviceId: null,
+      spotifyPlayer: null
+    };
+
+    /*************************************************************************
+     * 3. WEB AUDIO API POLYPHONIC SYNTHESIZER (INSTANT DEMO ENGINE)
+     *************************************************************************/
+    class ZuneMobileSynth {
+      constructor() {
+        this.ctx = null;
+        this.masterGain = null;
+        this.timer = null;
+        this.step = 0;
+      }
+
+      ensureContext() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioCtx();
+          this.masterGain = this.ctx.createGain();
+          this.masterGain.gain.value = state.volume * 0.24;
+          this.masterGain.connect(this.ctx.destination);
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      setVolume(vol) {
+        if (this.masterGain && this.ctx) {
+          this.masterGain.gain.setTargetAtTime(vol * 0.24, this.ctx.currentTime, 0.04);
+        }
+      }
+
+      play(track) {
+        this.stop();
+        this.ensureContext();
+        const cfg = track.synth || { root: 220, scale: [0, 3, 7, 10, 12], tempo: 115, wave: 'triangle' };
+        const intervalMs = (60 / cfg.tempo / 2) * 1000;
+
+        const triggerNote = () => {
+          if (!state.isPlaying || state.spotifyConnected) return;
+          const now = this.ctx.currentTime;
+          const semi = cfg.scale[this.step % cfg.scale.length];
+          const oct = this.step % 8 === 0 ? 0.5 : (this.step % 4 === 2 ? 2 : 1);
+          const freq = cfg.root * Math.pow(2, semi / 12) * oct;
+
+          const osc = this.ctx.createOscillator();
+          const env = this.ctx.createGain();
+          osc.type = cfg.wave;
+          osc.frequency.setValueAtTime(freq, now);
+
+          env.gain.setValueAtTime(0.001, now);
+          env.gain.exponentialRampToValueAtTime(0.32, now + 0.035);
+          env.gain.exponentialRampToValueAtTime(0.0008, now + (intervalMs / 1000) * 1.75);
+
+          osc.connect(env);
+          env.connect(this.masterGain);
+          osc.start(now);
+          osc.stop(now + (intervalMs / 1000) * 1.85);
+          this.step++;
+        };
+
+        triggerNote();
+        this.timer = setInterval(triggerNote, intervalMs);
+      }
+
+      stop() {
+        if (this.timer) {
+          clearInterval(this.timer);
+          this.timer = null;
+        }
+      }
+    }
+
+    const demoSynth = new ZuneMobileSynth();
+
+    /*************************************************************************
+     * 4. SPOTIFY SERVERLESS PKCE OAUTH & WEB PLAYBACK SDK
+     *************************************************************************/
+    function getRedirectUri() {
+      return window.location.origin + window.location.pathname;
+    }
+
+    function randomVerifier(len = 64) {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      const arr = crypto.getRandomValues(new Uint8Array(len));
+      return Array.from(arr, x => chars[x % chars.length]).join('');
+    }
+
+    async function sha256Challenge(verifier) {
+      const data = new TextEncoder().encode(verifier);
+      const digest = await crypto.subtle.digest('SHA-256', data);
+      return btoa(String.fromCharCode(...new Uint8Array(digest)))
+        .replace(/=/g, '')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_');
+    }
+
+    async function initiateSpotifyPKCE() {
+      const clientId = document.getElementById('clientIdInput').value.trim();
+      if (!clientId) {
+        showToast('Enter your Spotify App Client ID first');
+        return;
+      }
+
+      localStorage.setItem('zune_mobile_spotify_cid', clientId);
+      const verifier = randomVerifier(64);
+      localStorage.setItem('zune_mobile_spotify_verifier', verifier);
+      const challenge = await sha256Challenge(verifier);
+
+      const scopes = [
+        'streaming',
+        'user-read-email',
+        'user-read-private',
+        'user-library-read',
+        'user-library-modify',
+        'user-top-read',
+        'playlist-read-private',
+        'user-read-playback-state',
+        'user-modify-playback-state'
+      ].join(' ');
+
+      const url = new URL('https://accounts.spotify.com/authorize');
+      url.search = new URLSearchParams({
+        response_type: 'code',
+        client_id: clientId,
+        scope: scopes,
+        code_challenge_method: 'S256',
+        code_challenge: challenge,
+        redirect_uri: getRedirectUri()
+      }).toString();
+
+      window.location.href = url.toString();
+    }
+
+    async function checkSpotifyOAuthCallback() {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      const err = params.get('error');
+
+      if (err) {
+        showToast('Spotify auth cancelled: ' + err);
+        window.history.replaceState({}, document.title, getRedirectUri());
+        return;
+      }
+
+      if (code) {
+        const clientId = localStorage.getItem('zune_mobile_spotify_cid');
+        const verifier = localStorage.getItem('zune_mobile_spotify_verifier');
+        window.history.replaceState({}, document.title, getRedirectUri());
+        if (!clientId || !verifier) return;
+
+        try {
+          showToast('Connecting to Spotify...');
+          const res = await fetch('https://accounts.spotify.com/api/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              client_id: clientId,
+              grant_type: 'authorization_code',
+              code,
+              redirect_uri: getRedirectUri(),
+              code_verifier: verifier
+            })
+          });
+          const tokenData = await res.json();
+          if (tokenData.access_token) {
+            localStorage.setItem('zune_mobile_spotify_token', tokenData.access_token);
+            localStorage.setItem('zune_mobile_spotify_exp', Date.now() + tokenData.expires_in * 1000);
+            await hydrateSpotifySession(tokenData.access_token);
+          } else {
+            showToast('Spotify auth failed: ' + (tokenData.error_description || 'Invalid token'));
+          }
+        } catch (e) {
+          console.error(e);
+          showToast('Network error during Spotify handshake');
+        }
+      } else {
+        const saved = localStorage.getItem('zune_mobile_spotify_token');
+        const exp = Number(localStorage.getItem('zune_mobile_spotify_exp') || 0);
+        if (saved && Date.now() < exp) {
+          await hydrateSpotifySession(saved);
+        }
+      }
+    }
+
+    async function hydrateSpotifySession(token) {
+      state.spotifyToken = token;
+      state.spotifyConnected = true;
+      demoSynth.stop();
+
+      try {
+        const meRes = await fetch('https://api.spotify.com/v1/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!meRes.ok) throw new Error('Spotify session expired');
+        state.spotifyUser = await meRes.json();
+
+        document.getElementById('audioModeBadge').textContent = 'spotify live';
+        document.getElementById('audioModeBadge').style.color = '#1DB954';
+        document.getElementById('spotifyConnPill').textContent = `● ${state.spotifyUser.display_name || 'connected'}`;
+        document.getElementById('spotifyConnPill').style.color = '#1DB954';
+        document.getElementById('spotifyHubHeading').textContent = `Synced: ${state.spotifyUser.display_name}`;
+        document.getElementById('spotifyHubSub').textContent = 'Your Spotify Saved Tracks, Albums, and Playlists are loaded into your Zune HD collection.';
+        document.getElementById('spotifyDisconnectBtn').classList.remove('hidden');
+
+        await syncSpotifyLibraryData(token);
+        setupSpotifyWebPlayback(token);
+        showToast(`Synced Spotify library for ${state.spotifyUser.display_name}`);
+      } catch (e) {
+        disconnectSpotify(true);
+      }
+    }
+
+    async function syncSpotifyLibraryData(token) {
+      const headers = { Authorization: `Bearer ${token}` };
+      const [tracksRes, playlistsRes] = await Promise.all([
+        fetch('https://api.spotify.com/v1/me/tracks?limit=50', { headers }),
+        fetch('https://api.spotify.com/v1/me/playlists?limit=25', { headers })
+      ]);
+
+      const tracksJson = await tracksRes.json();
+      const playlistsJson = await playlistsRes.json();
+
+      if (tracksJson.items && tracksJson.items.length) {
+        const mapped = tracksJson.items
+          .filter(x => x.track)
+          .map(x => {
+            const t = x.track;
+            return {
+              id: t.id,
+              uri: t.uri,
+              title: t.name,
+              artist: t.artists.map(a => a.name).join(', '),
+              album: t.album.name,
+              year: (t.album.release_date || '').slice(0, 4) || 'Spotify',
+              durationMs: t.duration_ms,
+              cover: (t.album.images && t.album.images[0]) ? t.album.images[0].url : DEMO_TRACKS[0].cover
+            };
+          });
+        state.library = mapped;
+        state.queue = [...mapped];
+        state.currentIndex = 0;
+      }
+
+      if (playlistsJson.items) {
+        state.playlists = playlistsJson.items.map(p => ({
+          id: p.id,
+          uri: p.uri,
+          name: p.name,
+          count: p.tracks.total,
+          cover: (p.images && p.images[0]) ? p.images[0].url : DEMO_TRACKS[0].cover
+        }));
+      }
+
+      renderAll();
+      loadTrack(false);
+    }
+
+    function setupSpotifyWebPlayback(token) {
+      if (!window.Spotify) return;
+      const player = new window.Spotify.Player({
+        name: 'Zune HD Mobile Web Hub',
+        getOAuthToken: cb => cb(token),
+        volume: state.volume
+      });
+
+      player.addListener('ready', ({ device_id }) => {
+        state.spotifyDeviceId = device_id;
+        showToast('Spotify Web Playback SDK Active');
+      });
+
+      player.addListener('player_state_changed', s => {
+        if (!s) return;
+        state.isPlaying = !s.paused;
+        state.positionMs = s.position;
+        state.durationMs = s.duration;
+        updatePlayIcons();
+      });
+
+      player.connect();
+      state.spotifyPlayer = player;
+    }
+
+    async function triggerSpotifyPlayback(track) {
+      if (!state.spotifyToken || !track.uri) return;
+      const url = state.spotifyDeviceId
+        ? `https://api.spotify.com/v1/me/player/play?device_id=${state.spotifyDeviceId}`
+        : `https://api.spotify.com/v1/me/player/play`;
+      try {
+        await fetch(url, {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${state.spotifyToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ uris: [track.uri] })
+        });
+      } catch (e) {
+        console.warn('Spotify playback API error:', e);
+      }
+    }
+
+    function disconnectSpotify(silent = false) {
+      localStorage.removeItem('zune_mobile_spotify_token');
+      localStorage.removeItem('zune_mobile_spotify_exp');
+      if (state.spotifyPlayer) state.spotifyPlayer.disconnect();
+
+      state.spotifyConnected = false;
+      state.spotifyToken = null;
+      state.spotifyUser = null;
+      state.library = [...DEMO_TRACKS];
+      state.queue = [...DEMO_TRACKS];
+      state.currentIndex = 0;
+
+      document.getElementById('audioModeBadge').textContent = 'demo synth';
+      document.getElementById('audioModeBadge').style.color = 'var(--zune-pink)';
+      document.getElementById('spotifyConnPill').textContent = '● demo mode';
+      document.getElementById('spotifyConnPill').style.color = 'var(--text-secondary)';
+      document.getElementById('spotifyHubHeading').textContent = 'Sync Your Spotify Library';
+      document.getElementById('spotifyDisconnectBtn').classList.add('hidden');
+
+      renderAll();
+      loadTrack(false);
+      if (!silent) showToast('Disconnected Spotify · Demo Library restored');
+    }
+
+    /*************************************************************************
+     * 5. PANORAMA NAVIGATION & TOUCH SWIPE GESTURES
+     *************************************************************************/
+    function switchPanorama(idx) {
+      state.activePane = Math.max(0, Math.min(3, idx));
+
+      // Update Clipped Panorama Header Typography & Smooth Scroll Position
+      const headerTrack = document.getElementById('panoramaHeaderTrack');
+      const headers = headerTrack.querySelectorAll('.metro-pivot-header');
+      headers.forEach((btn, i) => {
+        const active = i === state.activePane;
+        btn.style.color = active ? 'var(--text-primary)' : 'var(--text-dim)';
+        if (active) {
+          headerTrack.scrollTo({
+            left: Math.max(0, btn.offsetLeft - 16),
+            behavior: 'smooth'
+          });
+        }
+      });
+
+      // Show active view pane
+      for (let i = 0; i < 4; i++) {
+        document.getElementById(`pane-${i}`).classList.toggle('hidden', i !== state.activePane);
+      }
+
+      // Show sub-tabs only on Collection pivot
+      document.getElementById('collectionSubTabs').classList.toggle('hidden', state.activePane !== 0);
+
+      // Hide bottom mini-player when full-screen Now Playing pivot is active
+      document.getElementById('miniPlayerBar').classList.toggle('hidden', state.activePane === 1);
+    }
+
+    // Horizontal Swipe Support on Mobile Touch Viewport
+    let touchStartX = 0;
+    let touchStartY = 0;
+    const touchViewport = document.getElementById('touchViewport');
+
+    touchViewport.addEventListener('touchstart', e => {
+      if (e.target.closest('input[type="range"]')) return;
+      touchStartX = e.changedTouches[0].screenX;
+      touchStartY = e.changedTouches[0].screenY;
+    }, { passive: true });
+
+    touchViewport.addEventListener('touchend', e => {
+      if (!touchStartX) return;
+      const dx = e.changedTouches[0].screenX - touchStartX;
+      const dy = e.changedTouches[0].screenY - touchStartY;
+      touchStartX = 0;
+      touchStartY = 0;
+
+      // Trigger panorama slide on deliberate horizontal swipe
+      if (Math.abs(dx) > 52 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+        if (dx < 0 && state.activePane < 3) {
+          switchPanorama(state.activePane + 1);
+        } else if (dx > 0 && state.activePane > 0) {
+          switchPanorama(state.activePane - 1);
+        }
+      }
+    }, { passive: true });
+
+    function toggleTheme() {
+      state.darkMode = !state.darkMode;
+      document.body.classList.toggle('theme-light', !state.darkMode);
+      showToast(state.darkMode ? 'Zune Pitch Black Mode' : 'Zune Crisp Light Mode');
+    }
+
+    /*************************************************************************
+     * 6. COLLECTION RENDERING (ARTISTS, ALBUMS, SONGS, PLAYLISTS + A-Z JUMP)
+     *************************************************************************/
+    function setCollectionTab(tab) {
+      state.collectionTab = tab;
+      document.querySelectorAll('.metro-sub-tab').forEach(btn => {
+        const active = btn.dataset.sub === tab;
+        btn.style.color = active ? 'var(--zune-pink)' : 'var(--text-secondary)';
+      });
+      renderCollection();
+    }
+
+    function getFilteredLibrary() {
+      return state.library.filter(t => {
+        const q = state.searchQuery;
+        const matchQ = !q ||
+          t.title.toLowerCase().includes(q) ||
+          t.artist.toLowerCase().includes(q) ||
+          t.album.toLowerCase().includes(q);
+        const matchArtist = !state.selectedArtist || t.artist === state.selectedArtist;
+        const matchAlbum = !state.selectedAlbum || t.album === state.selectedAlbum;
+        return matchQ && matchArtist && matchAlbum;
+      });
+    }
+
+    function renderCollection() {
+      const container = document.getElementById('collectionScrollArea');
+      const filterBanner = document.getElementById('activeFilterBanner');
+
+      if (state.selectedArtist || state.selectedAlbum) {
+        filterBanner.classList.remove('hidden');
+        document.getElementById('activeFilterText').textContent = state.selectedAlbum
+          ? `album: ${state.selectedAlbum}`
+          : `artist: ${state.selectedArtist}`;
+      } else {
+        filterBanner.classList.add('hidden');
+      }
+
+      const items = getFilteredLibrary();
+
+      // TAB 1: ARTISTS WITH WINDOWS PHONE 7 ALPHABETICAL LETTER SQUARES
+      if (state.collectionTab === 'artists' && !state.selectedArtist && !state.selectedAlbum) {
+        const artistMap = new Map();
+        items.forEach(t => {
+          if (!artistMap.has(t.artist)) {
+            artistMap.set(t.artist, { name: t.artist, count: 0, cover: t.cover });
+          }
+          artistMap.get(t.artist).count++;
+        });
+
+        const sortedArtists = Array.from(artistMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+        let lastLetter = '';
+        let html = '';
+
+        sortedArtists.forEach(art => {
+          const letter = art.name[0].toLowerCase();
+          if (letter !== lastLetter) {
+            lastLetter = letter;
+            html += `
+              <button onclick="openAlphaJump()"
+                      id="alpha-anchor-${letter}"
+                      class="w-10 h-10 mt-3 mb-1.5 flex items-center justify-center text-xl metro-light-title text-white zune-gradient-bg metro-tile">
+                ${letter}
+              </button>
+            `;
+          }
+          html += `
+            <div onclick="filterByArtist('${escapeStr(art.name)}')"
+                 class="metro-tile flex items-center gap-3.5 py-2.5 cursor-pointer">
+              <img src="${art.cover}" alt="" class="w-12 h-12 object-cover shrink-0 border" style="border-color: var(--border-metro);" />
+              <div class="min-w-0 flex-1">
+                <div class="metro-light-title text-2xl truncate leading-tight">${art.name}</div>
+                <div class="text-xs" style="color: var(--text-secondary);">${art.count} ${art.count === 1 ? 'song' : 'songs'}</div>
+              </div>
+            </div>
+          `;
+        });
+
+        container.innerHTML = html || `<div class="py-12 text-center text-sm" style="color: var(--text-secondary);">No matching artists found</div>`;
+        return;
+      }
+
+      // TAB 2: ALBUMS (SHARP METRO SQUARE GRID)
+      if (state.collectionTab === 'albums' && !state.selectedAlbum) {
+        const albumMap = new Map();
+        items.forEach(t => {
+          if (!albumMap.has(t.album)) {
+            albumMap.set(t.album, t);
+          }
+        });
+        const albums = Array.from(albumMap.values());
+
+        container.innerHTML = `
+          <div class="grid grid-cols-2 gap-3 pt-1">
+            ${albums.map(alb => `
+              <div onclick="filterByAlbum('${escapeStr(alb.album)}')" class="metro-tile cursor-pointer flex flex-col gap-1.5">
+                <div class="relative aspect-square w-full border" style="border-color: var(--border-metro);">
+                  <img src="${alb.cover}" alt="${alb.album}" class="w-full h-full object-cover" />
+                  <button onclick="event.stopPropagation(); playAlbum('${escapeStr(alb.album)}');"
+                          class="absolute bottom-2 right-2 w-9 h-9 text-white zune-gradient-bg flex items-center justify-center shadow-md">
+                    ▶
+                  </button>
+                </div>
+                <div class="text-sm font-semibold truncate">${alb.album}</div>
+                <div class="text-xs truncate -mt-1" style="color: var(--text-secondary);">${alb.artist}</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+        return;
+      }
+
+      // TAB 4: PLAYLISTS
+      if (state.collectionTab === 'playlists') {
+        const lists = state.playlists.length ? state.playlists : [
+          { name: 'Zune HD 2009 Essentials', count: DEMO_TRACKS.length, cover: DEMO_TRACKS[4].cover, isDemo: true },
+          { name: 'Post-Punk & Indie Favorites', count: state.favorites.size, cover: DEMO_TRACKS[0].cover, isDemo: true }
+        ];
+
+        container.innerHTML = `
+          <div class="space-y-2.5 pt-1">
+            ${lists.map((p, idx) => `
+              <div onclick="${p.isDemo ? `startSmartMix(${idx === 1 ? "'favorites'" : "'all'"})` : `playSpotifyPlaylist('${p.uri}')`}"
+                   class="metro-tile flex items-center gap-3.5 p-2 border cursor-pointer"
+                   style="background-color: var(--bg-tile); border-color: var(--border-metro);">
+                <img src="${p.cover}" alt="" class="w-14 h-14 object-cover shrink-0" />
+                <div class="min-w-0 flex-1">
+                  <div class="metro-light-title text-xl truncate">${p.name}</div>
+                  <div class="text-xs" style="color: var(--text-secondary);">${p.count} tracks</div>
+                </div>
+                <span class="px-2 text-sm" style="color: var(--zune-pink);">▶</span>
+              </div>
+            `).join('')}
+          </div>
+        `;
+        return;
+      }
+
+      // TAB 3: SONGS LIST (OR FILTERED ARTIST/ALBUM TRACKLIST)
+      const currentTrack = state.queue[state.currentIndex];
+      container.innerHTML = `
+        <div class="flex items-center justify-between py-2 mb-1">
+          <button onclick="playFilteredList(0)" class="text-xs font-bold uppercase tracking-widest flex items-center gap-1.5" style="color: var(--zune-pink);">
+            <span>▶</span> play all (${items.length})
+          </button>
+        </div>
+        <div class="divide-y" style="border-color: var(--border-metro);">
+          ${items.map((track, idx) => {
+            const active = currentTrack && currentTrack.id === track.id;
+            const fav = state.favorites.has(track.id);
+            return `
+              <div onclick="playFilteredList(${idx})"
+                   class="metro-tile py-3 flex items-center justify-between gap-3 cursor-pointer">
+                <div class="min-w-0 flex-1">
+                  <div class="text-base font-normal truncate" style="color: ${active ? 'var(--zune-pink)' : 'var(--text-primary)'};">
+                    ${active && state.isPlaying ? '▶ ' : ''}${track.title}
+                  </div>
+                  <div class="text-xs truncate" style="color: var(--text-secondary);">
+                    ${track.artist} · ${track.album}
+                  </div>
+                </div>
+                <div class="flex items-center gap-3 shrink-0">
+                  <button onclick="event.stopPropagation(); toggleFavoriteId('${track.id}')"
+                          class="text-base px-1" style="color: ${fav ? 'var(--zune-pink)' : 'var(--text-dim)'};">
+                    ${fav ? '♥' : '♡'}
+                  </button>
+                  <span class="text-xs font-mono" style="color: var(--text-secondary);">${formatMs(track.durationMs)}</span>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    function filterByArtist(artist) {
+      state.selectedArtist = artist;
+      state.selectedAlbum = null;
+      renderCollection();
+    }
+
+    function filterByAlbum(album) {
+      state.selectedAlbum = album;
+      renderCollection();
+    }
+
+    function resetCollectionFilters() {
+      state.selectedArtist = null;
+      state.selectedAlbum = null;
+      renderCollection();
+    }
+
+    function toggleSearchBar() {
+      const box = document.getElementById('mobileSearchBox');
+      box.classList.toggle('hidden');
+      if (!box.classList.contains('hidden')) {
+        document.getElementById('searchInput').focus();
+      }
+    }
+
+    function handleSearch(val) {
+      state.searchQuery = val.trim().toLowerCase();
+      renderCollection();
+    }
+
+    function clearSearch() {
+      state.searchQuery = '';
+      document.getElementById('searchInput').value = '';
+      document.getElementById('mobileSearchBox').classList.add('hidden');
+      renderCollection();
+    }
+
+    // Windows Phone 7 / Zune Alphabetical Jump-Grid Overlay
+    function openAlphaJump() {
+      const availableLetters = new Set(state.library.map(t => t.artist[0].toLowerCase()));
+      const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
+      document.getElementById('alphaJumpGrid').innerHTML = alphabet.map(ch => {
+        const hasItems = availableLetters.has(ch);
+        return `
+          <button onclick="jumpToLetter('${ch}')" ${hasItems ? '' : 'disabled'}
+                  class="aspect-square flex items-center justify-center text-2xl metro-light-title text-white ${hasItems ? 'zune-gradient-bg metro-tile' : 'opacity-20 border border-neutral-800'}">
+            ${ch}
+          </button>
+        `;
+      }).join('');
+      document.getElementById('alphaJumpOverlay').classList.remove('hidden');
+    }
+
+    function closeAlphaJump() {
+      document.getElementById('alphaJumpOverlay').classList.add('hidden');
+    }
+
+    function jumpToLetter(letter) {
+      closeAlphaJump();
+      const target = document.getElementById(`alpha-anchor-${letter}`);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    /*************************************************************************
+     * 7. SMART DJ / QUICKPLAY LIVE TILES & NOW PLAYING MOSAIC
+     *************************************************************************/
+    function renderSmartDjHub() {
+      document.getElementById('tileTotalSongs').textContent = `${state.library.length} tracks ready`;
+      document.getElementById('tileFavCount').textContent = `${state.favorites.size} favorites`;
+
+      const channels = [
+        { title: 'post-punk pulse', sub: 'sharp guitars & basslines', color: '#EC008C' },
+        { title: 'redmond night', sub: 'ambient oled synthwave', color: '#F26522' },
+        { title: '2000s indie', sub: 'classic garage revival', color: '#7C3AED' },
+        { title: 'deep focus', sub: 'instrumental rotation', color: '#0D9488' }
+      ];
+
+      document.getElementById('smartDjGrid').innerHTML = channels.map(ch => `
+        <button onclick="startSmartMix('random')"
+                class="metro-tile h-24 p-3 text-left flex flex-col justify-between border"
+                style="background-color: var(--bg-tile); border-color: var(--border-metro); border-left: 3px solid ${ch.color};">
+          <div class="text-sm font-semibold leading-tight">${ch.title}</div>
+          <div class="text-[11px]" style="color: var(--text-secondary);">${ch.sub}</div>
+        </button>
+      `).join('');
+
+      // Pinned / Recent Albums
+      const seenAlbums = new Set();
+      const albums = [];
+      state.library.forEach(t => {
+        if (!seenAlbums.has(t.album) && albums.length < 4) {
+          seenAlbums.add(t.album);
+          albums.push(t);
+        }
+      });
+
+      document.getElementById('pinnedAlbumsGrid').innerHTML = albums.map(alb => `
+        <div onclick="playAlbum('${escapeStr(alb.album)}'); switchPanorama(1);"
+             class="metro-tile relative aspect-square overflow-hidden cursor-pointer border"
+             style="border-color: var(--border-metro);">
+          <img src="${alb.cover}" alt="" class="w-full h-full object-cover" />
+          <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent p-2.5 flex flex-col justify-end">
+            <div class="text-white text-xs font-semibold truncate">${alb.album}</div>
+            <div class="text-white/75 text-[10px] truncate">${alb.artist}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderNowPlayingMosaic() {
+      const grid = document.getElementById('npMosaicGrid');
+      const covers = state.library.map(t => t.cover);
+      if (!covers.length) return;
+      let html = '';
+      for (let i = 0; i < 12; i++) {
+        html += `<img src="${covers[i % covers.length]}" alt="" class="w-full aspect-square object-cover" />`;
+      }
+      grid.innerHTML = html;
+    }
+
+    function toggleMosaicMode() {
+      state.mosaicMode = !state.mosaicMode;
+      document.getElementById('npMosaicGrid').classList.toggle('hidden', !state.mosaicMode);
+      document.getElementById('npBackdropImg').classList.toggle('hidden', state.mosaicMode);
+      document.getElementById('mosaicModeBtn').textContent = state.mosaicMode ? 'wallpaper: mosaic' : 'wallpaper: cover';
+    }
+
+    function openQueueDrawer() {
+      const current = state.queue[state.currentIndex];
+      document.getElementById('queueDrawerList').innerHTML = state.queue.map((t, i) => {
+        const active = current && current.id === t.id;
+        return `
+          <div onclick="playQueueIndex(${i}); closeQueueDrawer();"
+               class="py-3 flex items-center gap-3 cursor-pointer">
+            <img src="${t.cover}" alt="" class="w-11 h-11 object-cover shrink-0" />
+            <div class="min-w-0 flex-1">
+              <div class="text-sm font-medium truncate" style="color: ${active ? 'var(--zune-pink)' : 'var(--text-primary)'};">
+                ${active ? '▶ ' : ''}${t.title}
+              </div>
+              <div class="text-xs truncate" style="color: var(--text-secondary);">${t.artist}</div>
+            </div>
+            <span class="text-xs font-mono" style="color: var(--text-secondary);">${formatMs(t.durationMs)}</span>
+          </div>
+        `;
+      }).join('');
+      document.getElementById('queueDrawer').classList.remove('translate-y-full');
+    }
+
+    function closeQueueDrawer() {
+      document.getElementById('queueDrawer').classList.add('translate-y-full');
+    }
+
+    function renderAll() {
+      renderCollection();
+      renderSmartDjHub();
+      renderNowPlayingMosaic();
+    }
+
+    /*************************************************************************
+     * 8. PLAYBACK TRANSPORT & SEEK ENGINE
+     *************************************************************************/
+    function loadTrack(autoPlay = true) {
+      const track = state.queue[state.currentIndex];
+      if (!track) return;
+
+      state.positionMs = 0;
+      state.durationMs = track.durationMs || 180000;
+
+      // Update Mini Player
+      document.getElementById('miniCover').src = track.cover;
+      document.getElementById('miniTitle').textContent = track.title;
+      document.getElementById('miniArtist').textContent = track.artist;
+
+      // Update Full-Screen Now Playing
+      document.getElementById('npBackdropImg').src = track.cover;
+      document.getElementById('npMainCover').src = track.cover;
+      document.getElementById('npArtistText').textContent = track.artist.toLowerCase();
+      document.getElementById('npSongText').textContent = track.title;
+      document.getElementById('npAlbumText').textContent = `${track.album} · ${track.year}`;
+      document.getElementById('npQueueCount').textContent = state.queue.length;
+
+      updateHeartUI();
+      updateSeekUI();
+
+      if (autoPlay) {
+        state.isPlaying = true;
+        if (state.spotifyConnected) {
+          triggerSpotifyPlayback(track);
+        } else {
+          demoSynth.play(track);
+        }
+      }
+
+      updatePlayIcons();
+      renderCollection();
+    }
+
+    function togglePlayPause() {
+      const track = state.queue[state.currentIndex];
+      if (!track) return;
+
+      state.isPlaying = !state.isPlaying;
+      if (state.isPlaying) {
+        if (state.spotifyConnected) {
+          if (state.spotifyPlayer) state.spotifyPlayer.resume();
+          else triggerSpotifyPlayback(track);
+        } else {
+          demoSynth.play(track);
+        }
+      } else {
+        if (state.spotifyConnected && state.spotifyPlayer) {
+          state.spotifyPlayer.pause();
+        } else {
+          demoSynth.stop();
+        }
+      }
+      updatePlayIcons();
+      renderCollection();
+    }
+
+    function nextTrack() {
+      if (!state.queue.length) return;
+      state.currentIndex = state.shuffle
+        ? Math.floor(Math.random() * state.queue.length)
+        : (state.currentIndex + 1) % state.queue.length;
+      loadTrack(true);
+    }
+
+    function prevTrack() {
+      if (!state.queue.length) return;
+      if (state.positionMs > 3500) {
+        state.positionMs = 0;
+        updateSeekUI();
+        return;
+      }
+      state.currentIndex = (state.currentIndex - 1 + state.queue.length) % state.queue.length;
+      loadTrack(true);
+    }
+
+    function playQueueIndex(idx) {
+      state.currentIndex = idx;
+      loadTrack(true);
+    }
+
+    function playFilteredList(idx) {
+      const list = getFilteredLibrary();
+      if (!list.length) return;
+      state.queue = [...list];
+      state.currentIndex = idx;
+      loadTrack(true);
+    }
+
+    function playAlbum(albumName) {
+      const tracks = state.library.filter(t => t.album === albumName);
+      if (!tracks.length) return;
+      state.queue = [...tracks];
+      state.currentIndex = 0;
+      loadTrack(true);
+    }
+
+    function playShuffledAll() {
+      state.queue = [...state.library].sort(() => Math.random() - 0.5);
+      state.currentIndex = 0;
+      loadTrack(true);
+      switchPanorama(1);
+      showToast('Shuffling all music');
+    }
+
+    function startSmartMix(mode) {
+      let pool = [...state.library];
+      if (mode === 'favorites' && state.favorites.size > 0) {
+        pool = state.library.filter(t => state.favorites.has(t.id));
+      } else {
+        pool.sort(() => Math.random() - 0.5);
+      }
+      state.queue = pool;
+      state.currentIndex = 0;
+      loadTrack(true);
+      switchPanorama(1);
+      showToast('Smart DJ Mix started');
+    }
+
+    async function playSpotifyPlaylist(uri) {
+      if (!state.spotifyToken || !uri) return;
+      try {
+        await fetch('https://api.spotify.com/v1/me/player/play', {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${state.spotifyToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ context_uri: uri })
+        });
+        switchPanorama(1);
+        showToast('Playing Spotify playlist');
+      } catch (e) {
+        showToast('Open Spotify on a device to start playlist');
+      }
+    }
+
+    function toggleShuffle() {
+      state.shuffle = !state.shuffle;
+      const btn = document.getElementById('shuffleBtn');
+      btn.style.borderColor = state.shuffle ? 'var(--zune-pink)' : 'var(--border-metro)';
+      btn.style.color = state.shuffle ? 'var(--zune-pink)' : 'var(--text-secondary)';
+      showToast(state.shuffle ? 'Shuffle: On' : 'Shuffle: Off');
+    }
+
+    function toggleRepeat() {
+      state.repeat = !state.repeat;
+      const btn = document.getElementById('repeatBtn');
+      btn.style.borderColor = state.repeat ? 'var(--zune-pink)' : 'var(--border-metro)';
+      btn.style.color = state.repeat ? 'var(--zune-pink)' : 'var(--text-secondary)';
+      showToast(state.repeat ? 'Repeat: On' : 'Repeat: Off');
+    }
+
+    function toggleFavoriteCurrent() {
+      const track = state.queue[state.currentIndex];
+      if (track) toggleFavoriteId(track.id);
+    }
+
+    function toggleFavoriteId(id) {
+      if (state.favorites.has(id)) {
+        state.favorites.delete(id);
+      } else {
+        state.favorites.add(id);
+      }
+      updateHeartUI();
+      renderCollection();
+      renderSmartDjHub();
+    }
+
+    function updateHeartUI() {
+      const track = state.queue[state.currentIndex];
+      const fav = track && state.favorites.has(track.id);
+      const btn = document.getElementById('npFavoriteBtn');
+      btn.textContent = fav ? '♥' : '♡';
+      btn.style.color = fav ? 'var(--zune-pink)' : 'var(--text-primary)';
+      btn.style.borderColor = fav ? 'var(--zune-pink)' : 'var(--border-metro)';
+    }
+
+    function handleVolumeChange(val) {
+      state.volume = Number(val) / 100;
+      document.getElementById('volumePctLabel').textContent = `${val}%`;
+      demoSynth.setVolume(state.volume);
+      if (state.spotifyPlayer) state.spotifyPlayer.setVolume(state.volume);
+    }
+
+    function handleScrubInput(val) {
+      state.isScrubbing = true;
+      state.positionMs = Math.floor((Number(val) / 1000) * state.durationMs);
+      updateSeekUI();
+    }
+
+    function handleScrubCommit(val) {
+      state.isScrubbing = false;
+      state.positionMs = Math.floor((Number(val) / 1000) * state.durationMs);
+      if (state.spotifyConnected && state.spotifyPlayer) {
+        state.spotifyPlayer.seek(state.positionMs);
+      }
+      updateSeekUI();
+    }
+
+    function updatePlayIcons() {
+      document.getElementById('npPlayIcon').classList.toggle('hidden', state.isPlaying);
+      document.getElementById('npPauseIcon').classList.toggle('hidden', !state.isPlaying);
+      document.getElementById('miniPlayIcon').classList.toggle('hidden', state.isPlaying);
+      document.getElementById('miniPauseIcon').classList.toggle('hidden', !state.isPlaying);
+    }
+
+    function updateSeekUI() {
+      const pct = state.durationMs > 0 ? Math.min(100, (state.positionMs / state.durationMs) * 100) : 0;
+      if (!state.isScrubbing) {
+        document.getElementById('npSeekSlider').value = Math.round(pct * 10);
+      }
+      document.getElementById('npSeekFill').style.width = `${pct}%`;
+      document.getElementById('miniProgressLine').style.width = `${pct}%`;
+      document.getElementById('npElapsed').textContent = formatMs(state.positionMs);
+      document.getElementById('npRemaining').textContent = `-${formatMs(Math.max(0, state.durationMs - state.positionMs))}`;
+    }
+
+    setInterval(() => {
+      if (state.isPlaying && !state.isScrubbing) {
+        state.positionMs += 250;
+        if (state.positionMs >= state.durationMs) {
+          if (state.repeat) {
+            state.positionMs = 0;
+          } else {
+            nextTrack();
+          }
+        }
+        updateSeekUI();
+      }
+    }, 250);
+
+    /*************************************************************************
+     * 9. UTILITIES & BOOTSTRAP
+     *************************************************************************/
+    function copyRedirectUri() {
+      const field = document.getElementById('redirectUriInput');
+      field.select();
+      document.execCommand('copy');
+      const btn = document.getElementById('copyUriBtn');
+      btn.textContent = 'copied';
+      setTimeout(() => (btn.textContent = 'copy'), 1800);
+    }
+
+    function formatMs(ms) {
+      const total = Math.floor((ms || 0) / 1000);
+      const m = Math.floor(total / 60);
+      const s = total % 60;
+      return `${m}:${s < 10 ? '0' : ''}${s}`;
+    }
+
+    function escapeStr(s) {
+      return String(s).replace(/'/g, "\\'");
+    }
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const el = document.getElementById('zuneToast');
+      el.textContent = msg;
+      el.classList.remove('opacity-0');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.add('opacity-0'), 2400);
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      document.getElementById('redirectUriInput').value = getRedirectUri();
+      const savedCid = localStorage.getItem('zune_mobile_spotify_cid');
+      if (savedCid) document.getElementById('clientIdInput').value = savedCid;
+
+      setCollectionTab('artists');
+      switchPanorama(0);
+      renderAll();
+      loadTrack(false);
+      await checkSpotifyOAuthCallback();
+    });
+  </script>
+</body>
+</html>
