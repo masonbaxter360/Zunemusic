@@ -231,9 +231,17 @@
     #queueDrawer {
       transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
     }
+
+    /* Windows Phone 7 / Zune Docked Lock Screen Slide Transition */
+    #zuneLockScreen {
+      transition: transform 0.36s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.28s ease;
+    }
   </style>
 </head>
 <body>
+
+  <!-- SILENT KEEP-ALIVE AUDIO ELEMENT FOR IOS LOCK SCREEN / MEDIA SESSION -->
+  <audio id="iosMediaSessionAudio" loop playsinline preload="auto" class="hidden"></audio>
 
   <!-- MOBILE ZUNE HD / METRO SHELL -->
   <div id="mobileShell">
@@ -336,28 +344,28 @@
       <section id="pane-1" class="hidden w-full h-full relative overflow-hidden flex flex-col justify-between">
         <!-- Live Full-Bleed Artist Portrait / Album / Mosaic Wallpaper -->
         <div class="absolute inset-0 overflow-hidden pointer-events-none">
-          <img id="npBackdropImg" src="" alt=""
-               class="w-full h-full object-cover opacity-80 zune-pan-backdrop transition-opacity duration-500"
-               style="object-position: center 20%;" />
-          <!-- Optional Mosaic Overlay Mode -->
-          <div id="npMosaicGrid" class="hidden absolute inset-0 grid grid-cols-3 gap-1 opacity-40"></div>
-          <div class="absolute inset-0" style="background: var(--scrim-gradient);"></div>
-        </div>
-
-        <!-- Top Now Playing Controls (Wallpaper mode & Up Next Queue trigger) -->
-        <div class="relative z-10 px-4 pt-2 flex items-center justify-between">
+        <!-- Top Now Playing Controls (Wallpaper mode, Lock Screen Dock, & Up Next Queue trigger) -->
+        <div class="relative z-10 px-4 pt-2 flex items-center justify-between gap-1.5">
           <button onclick="cycleBackdropMode()" id="mosaicModeBtn"
-                  class="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 border"
+                  class="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 border truncate"
                   style="border-color: rgba(255,255,255,0.22); background-color: rgba(0,0,0,0.45); color: var(--text-primary);">
             wallpaper: artist photo
           </button>
 
-          <button onclick="openQueueDrawer()"
-                  class="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 border flex items-center gap-1.5"
-                  style="border-color: rgba(255,255,255,0.22); background-color: rgba(0,0,0,0.45); color: var(--text-primary);">
-            <span>up next</span>
-            <span id="npQueueCount" class="px-1.5 py-0.2 text-white zune-gradient-bg">0</span>
-          </button>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button onclick="openZuneLockScreen()" title="Zune WP7 Docked Lock Screen"
+                    class="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 border flex items-center gap-1"
+                    style="border-color: rgba(236,0,140,0.65); background-color: rgba(0,0,0,0.55); color: var(--text-primary);">
+              <span>lock</span>
+            </button>
+
+            <button onclick="openQueueDrawer()"
+                    class="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 border flex items-center gap-1.5"
+                    style="border-color: rgba(255,255,255,0.22); background-color: rgba(0,0,0,0.45); color: var(--text-primary);">
+              <span>up next</span>
+              <span id="npQueueCount" class="px-1.5 py-0.2 text-white zune-gradient-bg">0</span>
+            </button>
+          </div>
         </div>
 
         <!-- Open Upper Portrait Window (lets full-bleed artist face shine) -->
@@ -748,6 +756,97 @@
       </div>
     </div>
 
+    <!-- ============================================================ -->
+    <!-- WINDOWS PHONE 7 / ZUNE DOCKED LOCK SCREEN OVERLAY            -->
+    <!-- ============================================================ -->
+    <div id="zuneLockScreen"
+         class="hidden absolute inset-0 z-50 flex flex-col justify-between overflow-hidden select-none"
+         style="background-color: #000000; padding-top: calc(18px + env(safe-area-inset-top, 0px)); padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));">
+      <!-- Full-Bleed Artist Portrait Wallpaper -->
+      <div class="absolute inset-0 pointer-events-none overflow-hidden">
+        <img id="lockBackdropImg" src="" alt=""
+             class="w-full h-full object-cover opacity-80 zune-pan-backdrop"
+             style="object-position: center 20%;" />
+        <div class="absolute inset-0"
+             style="background: linear-gradient(180deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.12) 38%, rgba(0,0,0,0.72) 68%, rgba(0,0,0,0.95) 100%);"></div>
+      </div>
+
+      <!-- Top Status Row: Zune Dock Badge & Wake Lock Status -->
+      <div class="relative z-10 px-6 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 zune-gradient-bg inline-block"></span>
+          <span class="metro-hub-kicker text-white/90">zune dock lock</span>
+        </div>
+        <span id="lockWakeStatus" class="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 border border-white/25 text-white/80 bg-black/40">
+          screen awake
+        </span>
+      </div>
+
+      <!-- Middle-Bottom WP7 Lock Screen Now Playing & Oversized Clock -->
+      <div class="relative z-10 px-6 mt-auto flex flex-col gap-5">
+        <!-- Compact WP7 Lock Screen Media Transport Card -->
+        <div class="border-l-2 pl-3.5 py-1" style="border-color: var(--zune-pink);">
+          <div class="flex items-center gap-3 mb-3">
+            <img id="lockCoverImg" src="" alt="" class="w-12 h-12 object-cover shrink-0 border border-white/25" />
+            <div class="min-w-0 flex-1">
+              <div id="lockSongTitle" class="text-white text-base font-semibold truncate">song title</div>
+              <div id="lockArtistName" class="text-white/75 text-xs truncate">artist name</div>
+            </div>
+          </div>
+
+          <!-- Circular Outline Lock-Screen Transport Controls -->
+          <div class="flex items-center gap-4">
+            <button onclick="prevTrack()" aria-label="Previous Track"
+                    class="w-11 h-11 rounded-full border-2 border-white/85 text-white flex items-center justify-center active:scale-90 transition-transform bg-black/30">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+              </svg>
+            </button>
+
+            <button onclick="togglePlayPause()" aria-label="Play or Pause"
+                    class="w-12 h-12 rounded-full border-2 border-white text-white flex items-center justify-center active:scale-90 transition-transform bg-black/35">
+              <svg id="lockPlayIcon" class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+              <svg id="lockPauseIcon" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+              </svg>
+            </button>
+
+            <button onclick="nextTrack()" aria-label="Next Track"
+                    class="w-11 h-11 rounded-full border-2 border-white/85 text-white flex items-center justify-center active:scale-90 transition-transform bg-black/30">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Authentic Windows Phone 7 Oversized Ultra-Light Clock & Lowercase Date -->
+        <div>
+          <div id="lockClockText"
+               class="metro-light-title text-white leading-none tracking-tight"
+               style="font-size: 76px; text-shadow: 0 2px 18px rgba(0,0,0,0.65);">
+            12:00
+          </div>
+          <div id="lockDateText"
+               class="metro-light-title text-white/90 text-2xl mt-1 lowercase"
+               style="text-shadow: 0 1px 12px rgba(0,0,0,0.65);">
+            sunday, november 22
+          </div>
+        </div>
+
+        <!-- WP7 Slide-Up Curtain Cue -->
+        <button onclick="closeZuneLockScreen()"
+                class="w-full pt-2 pb-1 flex flex-col items-center gap-1 text-white/80 active:text-white">
+          <svg class="w-5 h-5 animate-bounce" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <polyline points="18 15 12 9 6 15"/>
+          </svg>
+          <span class="text-[10px] font-bold uppercase tracking-[0.22em]">slide up or tap to unlock</span>
+        </button>
+      </div>
+    </div>
+
     <!-- MOBILE TOAST MESSAGE -->
     <div id="zuneToast" class="absolute bottom-20 left-4 right-4 z-50 px-4 py-2.5 text-xs font-semibold text-white zune-gradient-bg opacity-0 pointer-events-none transition-opacity duration-200 shadow-xl">
       Toast message
@@ -954,8 +1053,283 @@
       spotifyToken: null,
       spotifyUser: null,
       spotifyDeviceId: null,
-      spotifyPlayer: null
+      spotifyPlayer: null,
+      // Native MediaSession & Zune Docked Lock Screen
+      lockScreenOpen: false,
+      wakeLockSentinel: null
     };
+
+    /*************************************************************************
+     * 3B. NATIVE IOS LOCK SCREEN (navigator.mediaSession) & DOCK LOCK SCREEN
+     *************************************************************************/
+    let silentWavBlobUrl = null;
+
+    /**
+     * Generates a valid 1-second silent PCM WAV Blob URL so iOS Safari/PWA
+     * binds a hardware media session to the Lock Screen & Control Center.
+     */
+    function getSilentWavUrl() {
+      if (silentWavBlobUrl) return silentWavBlobUrl;
+      const sampleRate = 8000;
+      const numSamples = sampleRate; // 1 second
+      const dataSize = numSamples * 2;
+      const buffer = new ArrayBuffer(44 + dataSize);
+      const view = new DataView(buffer);
+
+      const writeStr = (offset, str) => {
+        for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+      };
+
+      writeStr(0, 'RIFF');
+      view.setUint32(4, 36 + dataSize, true);
+      writeStr(8, 'WAVE');
+      writeStr(12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true); // PCM
+      view.setUint16(22, 1, true); // Mono
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * 2, true);
+      view.setUint16(32, 2, true);
+      view.setUint16(34, 16, true);
+      writeStr(36, 'data');
+      view.setUint32(40, dataSize, true);
+
+      const blob = new Blob([buffer], { type: 'audio/wav' });
+      silentWavBlobUrl = URL.createObjectURL(blob);
+      return silentWavBlobUrl;
+    }
+
+    function syncIosMediaSessionAudio(playing) {
+      const audioEl = document.getElementById('iosMediaSessionAudio');
+      if (!audioEl) return;
+      if (!audioEl.src) {
+        audioEl.src = getSilentWavUrl();
+      }
+      if (playing) {
+        audioEl.play().catch(() => {});
+      } else {
+        audioEl.pause();
+      }
+    }
+
+    /**
+     * Converts data:image/svg+xml covers to a crisp 512x512 PNG data URL
+     * because iOS Lock Screen MediaMetadata ignores inline SVG data URLs.
+     */
+    function rasterizeArtworkForMediaSession(coverUrl, callback) {
+      if (!coverUrl) {
+        callback([]);
+        return;
+      }
+      if (!coverUrl.startsWith('data:image/svg+xml')) {
+        callback([
+          { src: coverUrl, sizes: '512x512', type: 'image/jpeg' },
+          { src: coverUrl, sizes: '300x300', type: 'image/jpeg' }
+        ]);
+        return;
+      }
+
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = 512;
+          canvas.height = 512;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, 512, 512);
+          const pngUrl = canvas.toDataURL('image/png');
+          callback([{ src: pngUrl, sizes: '512x512', type: 'image/png' }]);
+        } catch (e) {
+          callback([]);
+        }
+      };
+      img.onerror = () => callback([]);
+      img.src = coverUrl;
+    }
+
+    function initNativeMediaSessionHandlers() {
+      if (!('mediaSession' in navigator)) return;
+
+      const safeSetHandler = (action, fn) => {
+        try {
+          navigator.mediaSession.setActionHandler(action, fn);
+        } catch (e) {}
+      };
+
+      safeSetHandler('play', () => {
+        if (!state.isPlaying) togglePlayPause();
+      });
+      safeSetHandler('pause', () => {
+        if (state.isPlaying) togglePlayPause();
+      });
+      safeSetHandler('previoustrack', () => prevTrack());
+      safeSetHandler('nexttrack', () => nextTrack());
+      safeSetHandler('seekto', details => {
+        if (details && typeof details.seekTime === 'number') {
+          state.positionMs = Math.max(0, Math.min(state.durationMs, Math.floor(details.seekTime * 1000)));
+          if (state.spotifyConnected && state.spotifyPlayer) {
+            state.spotifyPlayer.seek(state.positionMs);
+          }
+          updateSeekUI();
+          updateMediaSessionPositionState();
+        }
+      });
+
+      // Explicitly clear seekbackward/seekforward so iOS Lock Screen renders Previous/Next track buttons
+      safeSetHandler('seekbackward', null);
+      safeSetHandler('seekforward', null);
+    }
+
+    function updateNativeMediaSessionMetadata(track) {
+      if (!('mediaSession' in navigator) || !track) return;
+
+      rasterizeArtworkForMediaSession(track.cover, artworkList => {
+        try {
+          navigator.mediaSession.metadata = new MediaMetadata({
+            title: track.title || 'Zune Track',
+            artist: track.artist || 'Unknown Artist',
+            album: track.album || 'Zune Collection',
+            artwork: artworkList
+          });
+        } catch (e) {}
+      });
+
+      navigator.mediaSession.playbackState = state.isPlaying ? 'playing' : 'paused';
+      updateMediaSessionPositionState();
+    }
+
+    function updateMediaSessionPositionState() {
+      if (!('mediaSession' in navigator) || typeof navigator.mediaSession.setPositionState !== 'function') return;
+      try {
+        const durSec = Math.max(1, (state.durationMs || 180000) / 1000);
+        const posSec = Math.max(0, Math.min(durSec, (state.positionMs || 0) / 1000));
+        navigator.mediaSession.setPositionState({
+          duration: durSec,
+          playbackRate: state.isPlaying ? 1.0 : 0.0,
+          position: posSec
+        });
+      } catch (e) {}
+    }
+
+    /* ZUNE WP7 DOCKED LOCK SCREEN OVERLAY & WAKE LOCK */
+    function updateLockScreenClock() {
+      const clockEl = document.getElementById('lockClockText');
+      const dateEl = document.getElementById('lockDateText');
+      if (!clockEl || !dateEl) return;
+
+      const now = new Date();
+      let hours = now.getHours();
+      const minutes = now.getMinutes();
+      hours = hours % 12;
+      if (hours === 0) hours = 12;
+      clockEl.textContent = `${hours}:${minutes < 10 ? '0' : ''}${minutes}`;
+
+      const weekday = now.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+      const month = now.toLocaleDateString('en-US', { month: 'long' }).toLowerCase();
+      const day = now.getDate();
+      dateEl.textContent = `${weekday}, ${month} ${day}`;
+    }
+
+    async function requestDockWakeLock() {
+      const statusEl = document.getElementById('lockWakeStatus');
+      if ('wakeLock' in navigator) {
+        try {
+          state.wakeLockSentinel = await navigator.wakeLock.request('screen');
+          if (statusEl) statusEl.textContent = 'screen awake';
+          state.wakeLockSentinel.addEventListener('release', () => {
+            if (statusEl) statusEl.textContent = 'dock mode';
+          });
+        } catch (e) {
+          if (statusEl) statusEl.textContent = 'dock mode';
+        }
+      } else if (statusEl) {
+        statusEl.textContent = 'dock mode';
+      }
+    }
+
+    function releaseDockWakeLock() {
+      if (state.wakeLockSentinel) {
+        state.wakeLockSentinel.release().catch(() => {});
+        state.wakeLockSentinel = null;
+      }
+    }
+
+    function openZuneLockScreen() {
+      const overlay = document.getElementById('zuneLockScreen');
+      if (!overlay) return;
+      state.lockScreenOpen = true;
+      updateLockScreenClock();
+      syncLockScreenTrackUI();
+      overlay.style.transform = 'translateY(0%)';
+      overlay.classList.remove('hidden');
+      requestDockWakeLock();
+    }
+
+    function closeZuneLockScreen() {
+      const overlay = document.getElementById('zuneLockScreen');
+      if (!overlay) return;
+      state.lockScreenOpen = false;
+      overlay.style.transform = 'translateY(-100%)';
+      setTimeout(() => {
+        if (!state.lockScreenOpen) {
+          overlay.classList.add('hidden');
+          overlay.style.transform = 'translateY(0%)';
+        }
+      }, 340);
+      releaseDockWakeLock();
+    }
+
+    function syncLockScreenTrackUI() {
+      const track = state.queue[state.currentIndex];
+      if (!track) return;
+      const coverEl = document.getElementById('lockCoverImg');
+      const titleEl = document.getElementById('lockSongTitle');
+      const artistEl = document.getElementById('lockArtistName');
+      const bgEl = document.getElementById('lockBackdropImg');
+
+      if (coverEl) coverEl.src = track.cover;
+      if (titleEl) titleEl.textContent = track.title;
+      if (artistEl) artistEl.textContent = track.artist;
+      if (bgEl) {
+        const npBg = document.getElementById('npBackdropImg');
+        bgEl.src = (npBg && npBg.src) ? npBg.src : track.cover;
+      }
+    }
+
+    // Swipe-up gesture on Zune Docked Lock Screen to slide curtain up
+    (function setupLockScreenSwipe() {
+      const lockEl = document.getElementById('zuneLockScreen');
+      if (!lockEl) return;
+      let startY = 0;
+      lockEl.addEventListener('touchstart', e => {
+        startY = e.changedTouches[0].screenY;
+      }, { passive: true });
+
+      lockEl.addEventListener('touchmove', e => {
+        if (!startY) return;
+        const dy = e.changedTouches[0].screenY - startY;
+        if (dy < 0) {
+          lockEl.style.transform = `translateY(${dy}px)`;
+        }
+      }, { passive: true });
+
+      lockEl.addEventListener('touchend', e => {
+        if (!startY) return;
+        const dy = e.changedTouches[0].screenY - startY;
+        startY = 0;
+        if (dy < -85) {
+          closeZuneLockScreen();
+        } else {
+          lockEl.style.transform = 'translateY(0%)';
+        }
+      }, { passive: true });
+    })();
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && state.lockScreenOpen) {
+        requestDockWakeLock();
+      }
+    });
 
     /*************************************************************************
      * 3. WEB AUDIO API POLYPHONIC SYNTHESIZER (INSTANT DEMO ENGINE)
@@ -2172,6 +2546,8 @@
       const currentTrack = state.queue[state.currentIndex];
       if (portraitUrl && currentTrack && currentTrack.id === track.id && state.backdropMode === 'artist') {
         backdropImg.src = portraitUrl;
+        const lockBg = document.getElementById('lockBackdropImg');
+        if (lockBg) lockBg.src = portraitUrl;
       }
     }
 
@@ -2234,12 +2610,14 @@
       document.getElementById('npAlbumText').textContent = `${track.album} · ${track.year}`;
       document.getElementById('npQueueCount').textContent = state.queue.length;
       applyNowPlayingBackdrop(track);
+      syncLockScreenTrackUI();
 
       updateHeartUI();
       updateSeekUI();
 
       if (autoPlay) {
         state.isPlaying = true;
+        syncIosMediaSessionAudio(true);
         if (state.spotifyConnected) {
           triggerSpotifyPlayback(track);
         } else {
@@ -2247,6 +2625,7 @@
         }
       }
 
+      updateNativeMediaSessionMetadata(track);
       updatePlayIcons();
       renderCollection();
     }
@@ -2256,6 +2635,7 @@
       if (!track) return;
 
       state.isPlaying = !state.isPlaying;
+      syncIosMediaSessionAudio(state.isPlaying);
       if (state.isPlaying) {
         if (state.spotifyConnected) {
           if (state.spotifyPlayer) state.spotifyPlayer.resume();
@@ -2269,6 +2649,10 @@
         } else {
           demoSynth.stop();
         }
+      }
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = state.isPlaying ? 'playing' : 'paused';
+        updateMediaSessionPositionState();
       }
       updatePlayIcons();
       renderCollection();
@@ -2415,6 +2799,7 @@
         state.spotifyPlayer.seek(state.positionMs);
       }
       updateSeekUI();
+      updateMediaSessionPositionState();
     }
 
     function updatePlayIcons() {
@@ -2422,6 +2807,10 @@
       document.getElementById('npPauseIcon').classList.toggle('hidden', !state.isPlaying);
       document.getElementById('miniPlayIcon').classList.toggle('hidden', state.isPlaying);
       document.getElementById('miniPauseIcon').classList.toggle('hidden', !state.isPlaying);
+      const lockPlay = document.getElementById('lockPlayIcon');
+      const lockPause = document.getElementById('lockPauseIcon');
+      if (lockPlay) lockPlay.classList.toggle('hidden', state.isPlaying);
+      if (lockPause) lockPause.classList.toggle('hidden', !state.isPlaying);
     }
 
     function updateSeekUI() {
@@ -2436,6 +2825,9 @@
     }
 
     setInterval(() => {
+      if (state.lockScreenOpen) {
+        updateLockScreenClock();
+      }
       if (state.isPlaying && !state.isScrubbing) {
         state.positionMs += 250;
         if (state.positionMs >= state.durationMs) {
@@ -2490,6 +2882,9 @@
         const savedCid = localStorage.getItem('zune_mobile_spotify_cid') || 'aa5884864c9641b9b5a03f877dab5f0a';
         const cidInput = document.getElementById('clientIdInput');
         if (cidInput) cidInput.value = savedCid;
+
+        initNativeMediaSessionHandlers();
+        updateLockScreenClock();
 
         setCollectionTab('artists');
         switchPanorama(0);
