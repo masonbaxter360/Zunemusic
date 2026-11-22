@@ -2,7 +2,12 @@
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Zune" />
+  <meta name="theme-color" content="#000000" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%23000000'/%3E%3Cpath d='M36 36H144L90 90L144 144H36L90 90L36 36Z' stroke='%23EC008C' stroke-width='14' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E" />
   <title>Zune HD — Music + Videos Hub</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Open-source metric-compatible fallback for Segoe UI on non-Windows mobile devices -->
@@ -462,7 +467,33 @@
       <!-- PIVOT 3: SPOTIFY SYNC HUB (Serverless PKCE OAuth + SDK)      -->
       <!-- ============================================================ -->
       <section id="pane-3" class="hidden w-full h-full overflow-y-auto no-scrollbar px-4 pt-2 pb-24">
-        <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-3.5">
+
+          <!-- PROMINENT ON-SCREEN ERROR / DIAGNOSTIC BANNER -->
+          <div id="spotifyErrorBanner" class="hidden p-3.5 border-l-4 border-red-500 bg-red-950/50 text-xs space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="font-bold uppercase tracking-wider text-red-400" id="spotifyErrorTitle">spotify connection issue</span>
+              <button onclick="hideSpotifyError()" class="text-red-300 px-1.5 py-0.5 border border-red-500/40 text-[10px]">✕</button>
+            </div>
+            <p id="spotifyErrorMessage" class="text-white/90 leading-relaxed"></p>
+          </div>
+
+          <!-- iOS HOME SCREEN PWA HANDOFF BANNER (Appears in Safari sheet after PWA login) -->
+          <div id="pwaHandoffBanner" class="hidden p-4 border-2 space-y-2.5"
+               style="background-color: #140812; border-color: var(--zune-pink);">
+            <div class="text-[10px] font-bold uppercase tracking-widest text-white px-2 py-0.5 inline-block zune-gradient-bg">
+              iphone home screen bridge
+            </div>
+            <div class="metro-light-title text-xl text-white">Spotify Authorized!</div>
+            <p class="text-xs text-white/85 leading-relaxed">
+              iOS opened login in a separate Safari sheet. Tap below to copy your session key, then tap <strong>Done</strong> (top-left) to return to your Zune Home Screen app and tap <strong>Paste Session Key</strong>.
+            </p>
+            <button onclick="copyPwaSessionKey()" id="copyPwaKeyBtn"
+                    class="w-full py-2.5 text-xs font-bold uppercase tracking-widest text-white zune-gradient-bg metro-tile">
+              copy session key for zune app
+            </button>
+          </div>
+
           <!-- Status Card -->
           <div class="p-4 border" style="background-color: var(--bg-tile); border-color: var(--border-metro);">
             <div class="flex items-center justify-between">
@@ -475,13 +506,20 @@
             </div>
             <h2 class="metro-light-title text-2xl mt-2" id="spotifyHubHeading">Sync Your Spotify Library</h2>
             <p class="text-xs mt-1 leading-relaxed" style="color: var(--text-secondary);" id="spotifyHubSub">
-              Connect your Spotify account via serverless PKCE OAuth to import your Saved Tracks, Albums, and Playlists into the Zune HD interface.
+              Connect your Spotify account via PKCE OAuth to import your Liked Songs, Albums, and Playlists into the Zune HD collection.
             </p>
 
-            <button id="spotifyDisconnectBtn" onclick="disconnectSpotify()"
-                    class="hidden mt-3 px-3 py-1.5 text-xs font-bold uppercase tracking-wider border border-red-500/40 text-red-400">
-              disconnect spotify
-            </button>
+            <!-- Connected Action Buttons (Sync Now + Disconnect) -->
+            <div id="spotifyConnectedActions" class="hidden mt-3 flex items-center gap-2">
+              <button onclick="manualResyncSpotify()" id="syncNowBtn"
+                      class="flex-1 py-2 text-xs font-bold uppercase tracking-widest text-white zune-gradient-bg metro-tile">
+                ↻ sync library now
+              </button>
+              <button id="spotifyDisconnectBtn" onclick="disconnectSpotify()"
+                      class="px-3 py-2 text-xs font-bold uppercase tracking-wider border border-red-500/50 text-red-400 metro-tile">
+                disconnect
+              </button>
+            </div>
           </div>
 
           <!-- Redirect URI Box -->
@@ -490,7 +528,7 @@
               1. Spotify Developer Redirect URI
             </div>
             <p class="text-[11px]" style="color: var(--text-secondary);">
-              Add this exact URL in your <a href="https://developer.spotify.com/dashboard" target="_blank" class="underline" style="color: var(--text-primary);">Spotify Dashboard</a> app settings:
+              Save this exact HTTPS URL in your <a href="https://developer.spotify.com/dashboard" target="_blank" class="underline" style="color: var(--text-primary);">Spotify Dashboard</a> app settings & add your Spotify email under <strong>User Management</strong>:
             </p>
             <div class="flex items-center gap-1.5">
               <input id="redirectUriInput" type="text" readonly
@@ -519,6 +557,39 @@
                     class="w-full py-3 text-xs font-bold uppercase tracking-widest text-white zune-gradient-bg metro-tile">
               connect spotify account →
             </button>
+
+            <!-- iOS Home Screen PWA Session Paste Bridge -->
+            <div id="pwaPasteBridgeBox" class="pt-2 border-t space-y-2" style="border-color: var(--border-metro);">
+              <div class="text-[10px] font-bold uppercase tracking-wider" style="color: var(--text-secondary);">
+                iPhone Home Screen App Bridge
+              </div>
+              <p class="text-[11px]" style="color: var(--text-secondary);">
+                If iOS opened login in a Safari popup sheet and you copied your Session Key, tap below to import it directly into this Home Screen app:
+              </p>
+              <button onclick="pastePwaSessionKey()"
+                      class="w-full py-2 text-[11px] font-bold uppercase tracking-wider border metro-tile"
+                      style="border-color: var(--zune-pink); color: var(--zune-pink);">
+                paste session key from clipboard
+              </button>
+            </div>
+          </div>
+
+          <!-- LIVE SYNC & DIAGNOSTICS LOG -->
+          <div class="p-4 border space-y-2" style="background-color: var(--bg-tile); border-color: var(--border-metro);">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold uppercase tracking-wider" style="color: var(--text-secondary);">
+                sync & diagnostics log
+              </span>
+              <button onclick="clearDiagLog()" class="text-[10px] uppercase tracking-wider px-2 py-0.5 border"
+                      style="border-color: var(--border-metro); color: var(--text-secondary);">
+                clear
+              </button>
+            </div>
+            <div id="syncDiagLog"
+                 class="max-h-36 overflow-y-auto text-[11px] font-mono p-2.5 border space-y-1 leading-snug"
+                 style="background-color: var(--bg-pitch); border-color: var(--border-metro); color: var(--text-secondary);">
+              <div>[ready] Zune HD bridge initialized.</div>
+            </div>
           </div>
 
           <!-- Volume Control for Mobile Web Audio / SDK -->
@@ -857,10 +928,67 @@
     const demoSynth = new ZuneMobileSynth();
 
     /*************************************************************************
-     * 4. SPOTIFY SERVERLESS PKCE OAUTH & WEB PLAYBACK SDK
+     * 4. SPOTIFY SERVERLESS PKCE OAUTH & WEB PLAYBACK SDK (2026 + iOS PWA)
      *************************************************************************/
+    let latestPwaSessionBundle = '';
+
+    function logDiag(msg, isError = false) {
+      const box = document.getElementById('syncDiagLog');
+      if (!box) return;
+      const now = new Date();
+      const ts = now.toTimeString().slice(0, 8);
+      const line = document.createElement('div');
+      line.style.color = isError ? '#F87171' : 'var(--text-secondary)';
+      line.textContent = `[${ts}] ${msg}`;
+      box.appendChild(line);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function clearDiagLog() {
+      const box = document.getElementById('syncDiagLog');
+      if (box) box.innerHTML = '<div>[cleared] Diagnostics log cleared.</div>';
+    }
+
+    function showSpotifyError(title, message) {
+      const banner = document.getElementById('spotifyErrorBanner');
+      document.getElementById('spotifyErrorTitle').textContent = title;
+      document.getElementById('spotifyErrorMessage').textContent = message;
+      banner.classList.remove('hidden');
+      logDiag(`ERROR (${title}): ${message}`, true);
+      switchPanorama(3);
+    }
+
+    function hideSpotifyError() {
+      document.getElementById('spotifyErrorBanner').classList.add('hidden');
+    }
+
+    function isStandalonePwa() {
+      return Boolean(window.navigator.standalone) ||
+        window.matchMedia('(display-mode: standalone)').matches;
+    }
+
     function getRedirectUri() {
       return window.location.origin + window.location.pathname;
+    }
+
+    function encodeStatePayload(obj) {
+      const json = JSON.stringify(obj);
+      return btoa(unescape(encodeURIComponent(json)))
+        .replace(/=/g, '')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_');
+    }
+
+    function decodeStatePayload(str) {
+      if (!str) return null;
+      try {
+        let b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+        while (b64.length % 4) b64 += '=';
+        const json = decodeURIComponent(escape(atob(b64)));
+        return JSON.parse(json);
+      } catch (e) {
+        return null;
+      }
     }
 
     function randomVerifier(len = 64) {
@@ -879,16 +1007,28 @@
     }
 
     async function initiateSpotifyPKCE() {
+      hideSpotifyError();
       const clientId = document.getElementById('clientIdInput').value.trim();
       if (!clientId) {
-        showToast('Enter your Spotify App Client ID first');
+        showSpotifyError('Missing Client ID', 'Paste your 32-character Spotify App Client ID before connecting.');
         return;
       }
 
+      const standalone = isStandalonePwa();
       localStorage.setItem('zune_mobile_spotify_cid', clientId);
       const verifier = randomVerifier(64);
       localStorage.setItem('zune_mobile_spotify_verifier', verifier);
+
+      // Self-contained PKCE state so OAuth succeeds even if iOS isolates PWA vs Safari storage
+      const stateParam = encodeStatePayload({
+        v: verifier,
+        c: clientId,
+        m: standalone ? 'pwa' : 'web'
+      });
+
       const challenge = await sha256Challenge(verifier);
+      const redirectUri = getRedirectUri();
+      logDiag(`Starting PKCE OAuth (${standalone ? 'iOS Home Screen PWA' : 'Browser'}) -> ${redirectUri}`);
 
       const scopes = [
         'streaming',
@@ -898,6 +1038,7 @@
         'user-library-modify',
         'user-top-read',
         'playlist-read-private',
+        'playlist-read-collaborative',
         'user-read-playback-state',
         'user-modify-playback-state'
       ].join(' ');
@@ -909,7 +1050,8 @@
         scope: scopes,
         code_challenge_method: 'S256',
         code_challenge: challenge,
-        redirect_uri: getRedirectUri()
+        redirect_uri: redirectUri,
+        state: stateParam
       }).toString();
 
       window.location.href = url.toString();
@@ -919,20 +1061,29 @@
       const params = new URLSearchParams(window.location.search);
       const code = params.get('code');
       const err = params.get('error');
+      const rawState = params.get('state');
+      const decodedState = decodeStatePayload(rawState);
 
       if (err) {
-        showToast('Spotify auth cancelled: ' + err);
         window.history.replaceState({}, document.title, getRedirectUri());
+        showSpotifyError('Spotify Authorization Denied', `Spotify returned: "${err}". Make sure you clicked Agree and your Redirect URI matches ${getRedirectUri()}.`);
         return;
       }
 
       if (code) {
-        const clientId = localStorage.getItem('zune_mobile_spotify_cid');
-        const verifier = localStorage.getItem('zune_mobile_spotify_verifier');
+        const clientId = (decodedState && decodedState.c) || localStorage.getItem('zune_mobile_spotify_cid');
+        const verifier = (decodedState && decodedState.v) || localStorage.getItem('zune_mobile_spotify_verifier');
+        const launchedFromPwa = decodedState && decodedState.m === 'pwa';
+
         window.history.replaceState({}, document.title, getRedirectUri());
-        if (!clientId || !verifier) return;
+
+        if (!clientId || !verifier) {
+          showSpotifyError('PKCE Verifier Missing', 'Could not recover PKCE verifier from callback state or storage. Tap Connect Spotify Account again.');
+          return;
+        }
 
         try {
+          logDiag('Exchanging authorization code for Spotify access token...');
           showToast('Connecting to Spotify...');
           const res = await fetch('https://accounts.spotify.com/api/token', {
             method: 'POST',
@@ -946,24 +1097,141 @@
             })
           });
           const tokenData = await res.json();
-          if (tokenData.access_token) {
-            localStorage.setItem('zune_mobile_spotify_token', tokenData.access_token);
-            localStorage.setItem('zune_mobile_spotify_exp', Date.now() + tokenData.expires_in * 1000);
-            await hydrateSpotifySession(tokenData.access_token);
-          } else {
-            showToast('Spotify auth failed: ' + (tokenData.error_description || 'Invalid token'));
+
+          if (!res.ok || !tokenData.access_token) {
+            const detail = tokenData.error_description || tokenData.error || `HTTP ${res.status}`;
+            showSpotifyError(
+              'Token Exchange Failed',
+              `${detail}. Double-check that "${getRedirectUri()}" is saved identically in your Spotify Dashboard Redirect URIs.`
+            );
+            return;
           }
+
+          const expiresAt = Date.now() + (tokenData.expires_in || 3600) * 1000;
+          localStorage.setItem('zune_mobile_spotify_cid', clientId);
+          localStorage.setItem('zune_mobile_spotify_token', tokenData.access_token);
+          localStorage.setItem('zune_mobile_spotify_exp', String(expiresAt));
+          if (tokenData.refresh_token) {
+            localStorage.setItem('zune_mobile_spotify_refresh', tokenData.refresh_token);
+          }
+
+          // Prepare portable session bundle for iOS Home Screen PWA <-> Safari bridge
+          latestPwaSessionBundle = 'ZUNE_SPOTIFY:' + encodeStatePayload({
+            t: tokenData.access_token,
+            r: tokenData.refresh_token || '',
+            e: expiresAt,
+            c: clientId
+          });
+
+          if (launchedFromPwa && !isStandalonePwa()) {
+            document.getElementById('pwaHandoffBanner').classList.remove('hidden');
+            logDiag('Authorized inside iOS Safari sheet. Session key ready for Home Screen PWA.');
+            switchPanorama(3);
+          }
+
+          await hydrateSpotifySession(tokenData.access_token);
         } catch (e) {
-          console.error(e);
-          showToast('Network error during Spotify handshake');
+          showSpotifyError('Network Error During Login', e.message || 'Could not reach accounts.spotify.com.');
         }
       } else {
         const saved = localStorage.getItem('zune_mobile_spotify_token');
         const exp = Number(localStorage.getItem('zune_mobile_spotify_exp') || 0);
         if (saved && Date.now() < exp) {
+          logDiag('Restoring saved Spotify session...');
           await hydrateSpotifySession(saved);
+        } else if (localStorage.getItem('zune_mobile_spotify_refresh')) {
+          await refreshSpotifyAccessToken();
         }
       }
+    }
+
+    async function refreshSpotifyAccessToken() {
+      const refreshToken = localStorage.getItem('zune_mobile_spotify_refresh');
+      const clientId = localStorage.getItem('zune_mobile_spotify_cid');
+      if (!refreshToken || !clientId) return false;
+
+      try {
+        logDiag('Refreshing expired Spotify token...');
+        const res = await fetch('https://accounts.spotify.com/api/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            client_id: clientId,
+            grant_type: 'refresh_token',
+            refresh_token: refreshToken
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.access_token) {
+          const exp = Date.now() + (data.expires_in || 3600) * 1000;
+          localStorage.setItem('zune_mobile_spotify_token', data.access_token);
+          localStorage.setItem('zune_mobile_spotify_exp', String(exp));
+          if (data.refresh_token) {
+            localStorage.setItem('zune_mobile_spotify_refresh', data.refresh_token);
+          }
+          await hydrateSpotifySession(data.access_token);
+          return true;
+        }
+      } catch (e) {
+        logDiag('Token refresh failed: ' + e.message, true);
+      }
+      return false;
+    }
+
+    function copyPwaSessionKey() {
+      if (!latestPwaSessionBundle) return;
+      const temp = document.createElement('textarea');
+      temp.value = latestPwaSessionBundle;
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand('copy');
+      document.body.removeChild(temp);
+
+      const btn = document.getElementById('copyPwaKeyBtn');
+      btn.textContent = 'copied! now tap "done" top-left';
+      showToast('Session Key copied — tap Done to return to Zune app');
+    }
+
+    async function pastePwaSessionKey() {
+      hideSpotifyError();
+      try {
+        let raw = '';
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          raw = await navigator.clipboard.readText();
+        }
+        if (!raw || !raw.startsWith('ZUNE_SPOTIFY:')) {
+          showSpotifyError(
+            'No Session Key in Clipboard',
+            'Tap "Connect Spotify Account", complete login in the popup sheet, tap "Copy Session Key for Zune App", tap Done, and then tap Paste Session Key.'
+          );
+          return;
+        }
+        const payload = decodeStatePayload(raw.replace('ZUNE_SPOTIFY:', '').trim());
+        if (!payload || !payload.t) {
+          showSpotifyError('Invalid Session Key', 'Clipboard text could not be decoded. Try copying the session key again.');
+          return;
+        }
+        localStorage.setItem('zune_mobile_spotify_token', payload.t);
+        localStorage.setItem('zune_mobile_spotify_exp', String(payload.e || (Date.now() + 3500000)));
+        if (payload.r) localStorage.setItem('zune_mobile_spotify_refresh', payload.r);
+        if (payload.c) {
+          localStorage.setItem('zune_mobile_spotify_cid', payload.c);
+          document.getElementById('clientIdInput').value = payload.c;
+        }
+        logDiag('Imported Session Key into Home Screen PWA!');
+        await hydrateSpotifySession(payload.t);
+      } catch (e) {
+        showSpotifyError('Clipboard Access Blocked', 'iOS blocked automatic clipboard read: ' + (e.message || 'Permission denied'));
+      }
+    }
+
+    async function manualResyncSpotify() {
+      if (!state.spotifyToken) return;
+      hideSpotifyError();
+      const btn = document.getElementById('syncNowBtn');
+      if (btn) btn.textContent = '↻ syncing...';
+      await syncSpotifyLibraryData(state.spotifyToken);
+      if (btn) btn.textContent = '↻ sync library now';
     }
 
     async function hydrateSpotifySession(token) {
@@ -972,71 +1240,184 @@
       demoSynth.stop();
 
       try {
+        logDiag('Fetching Spotify user profile (/v1/me)...');
         const meRes = await fetch('https://api.spotify.com/v1/me', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        if (!meRes.ok) throw new Error('Spotify session expired');
+
+        if (meRes.status === 403) {
+          showSpotifyError(
+            '403 Forbidden — Account Not Allowlisted',
+            'Spotify blocked API access. Open developer.spotify.com/dashboard -> your Zune app -> Settings -> User Management and add your exact Spotify Premium email address, then reconnect.'
+          );
+          return;
+        }
+        if (meRes.status === 401) {
+          const refreshed = await refreshSpotifyAccessToken();
+          if (!refreshed) disconnectSpotify(true);
+          return;
+        }
+        if (!meRes.ok) {
+          throw new Error(`Profile request failed (HTTP ${meRes.status})`);
+        }
+
         state.spotifyUser = await meRes.json();
+        const displayName = state.spotifyUser?.display_name || state.spotifyUser?.id || 'Spotify User';
+        logDiag(`Authenticated as "${displayName}"`);
 
         document.getElementById('audioModeBadge').textContent = 'spotify live';
         document.getElementById('audioModeBadge').style.color = '#1DB954';
-        document.getElementById('spotifyConnPill').textContent = `● ${state.spotifyUser.display_name || 'connected'}`;
+        document.getElementById('spotifyConnPill').textContent = `● ${displayName}`;
         document.getElementById('spotifyConnPill').style.color = '#1DB954';
-        document.getElementById('spotifyHubHeading').textContent = `Synced: ${state.spotifyUser.display_name}`;
-        document.getElementById('spotifyHubSub').textContent = 'Your Spotify Saved Tracks, Albums, and Playlists are loaded into your Zune HD collection.';
-        document.getElementById('spotifyDisconnectBtn').classList.remove('hidden');
+        document.getElementById('spotifyHubHeading').textContent = `Synced: ${displayName}`;
+        document.getElementById('spotifyHubSub').textContent = 'Connected to Spotify Web API. Tap Sync Library Now anytime to refresh your tracks.';
+        document.getElementById('spotifyConnectedActions').classList.remove('hidden');
 
         await syncSpotifyLibraryData(token);
         setupSpotifyWebPlayback(token);
-        showToast(`Synced Spotify library for ${state.spotifyUser.display_name}`);
+        showToast(`Synced Spotify library for ${displayName}`);
       } catch (e) {
-        disconnectSpotify(true);
+        showSpotifyError('Spotify Sync Error', e.message || 'Unable to load Spotify profile.');
       }
+    }
+
+    function mapSpotifyTrackObj(t, fallbackCover) {
+      if (!t || !t.id) return null;
+      const artists = Array.isArray(t.artists) && t.artists.length
+        ? t.artists.map(a => a.name).join(', ')
+        : 'Unknown Artist';
+      const albumName = t.album?.name || 'Single';
+      const year = (t.album?.release_date || '').slice(0, 4) || 'Spotify';
+      const cover = t.album?.images?.[0]?.url || fallbackCover || DEMO_TRACKS[0].cover;
+      return {
+        id: t.id,
+        uri: t.uri || `spotify:track:${t.id}`,
+        title: t.name || 'Untitled Track',
+        artist: artists,
+        album: albumName,
+        year,
+        durationMs: t.duration_ms || 180000,
+        cover
+      };
     }
 
     async function syncSpotifyLibraryData(token) {
       const headers = { Authorization: `Bearer ${token}` };
-      const [tracksRes, playlistsRes] = await Promise.all([
+      logDiag('Fetching Liked Songs (/me/tracks), Albums (/me/albums), and Playlists (/me/playlists)...');
+
+      const [tracksRes, albumsRes, playlistsRes] = await Promise.all([
         fetch('https://api.spotify.com/v1/me/tracks?limit=50', { headers }),
-        fetch('https://api.spotify.com/v1/me/playlists?limit=25', { headers })
+        fetch('https://api.spotify.com/v1/me/albums?limit=50', { headers }),
+        fetch('https://api.spotify.com/v1/me/playlists?limit=50', { headers })
       ]);
 
-      const tracksJson = await tracksRes.json();
-      const playlistsJson = await playlistsRes.json();
+      const collectedMap = new Map();
 
-      if (tracksJson.items && tracksJson.items.length) {
-        const mapped = tracksJson.items
-          .filter(x => x.track)
-          .map(x => {
-            const t = x.track;
-            return {
-              id: t.id,
-              uri: t.uri,
-              title: t.name,
-              artist: t.artists.map(a => a.name).join(', '),
-              album: t.album.name,
-              year: (t.album.release_date || '').slice(0, 4) || 'Spotify',
-              durationMs: t.duration_ms,
-              cover: (t.album.images && t.album.images[0]) ? t.album.images[0].url : DEMO_TRACKS[0].cover
-            };
-          });
-        state.library = mapped;
-        state.queue = [...mapped];
-        state.currentIndex = 0;
+      // 1. Liked Songs
+      if (tracksRes.ok) {
+        const tracksJson = await tracksRes.json();
+        const items = tracksJson.items || [];
+        logDiag(`/me/tracks returned ${items.length} Liked Songs.`);
+        items.forEach(entry => {
+          const mapped = mapSpotifyTrackObj(entry?.track);
+          if (mapped) collectedMap.set(mapped.id, mapped);
+        });
+      } else {
+        logDiag(`/me/tracks returned HTTP ${tracksRes.status}`, true);
       }
 
-      if (playlistsJson.items) {
-        state.playlists = playlistsJson.items.map(p => ({
+      // 2. Saved Albums (extract tracks so saved albums populate collection too)
+      if (albumsRes.ok) {
+        const albumsJson = await albumsRes.json();
+        const albItems = albumsJson.items || [];
+        logDiag(`/me/albums returned ${albItems.length} Saved Albums.`);
+        albItems.forEach(entry => {
+          const alb = entry?.album;
+          const albCover = alb?.images?.[0]?.url || DEMO_TRACKS[0].cover;
+          const albTracks = alb?.tracks?.items || [];
+          albTracks.forEach(tr => {
+            const enriched = { ...tr, album: alb };
+            const mapped = mapSpotifyTrackObj(enriched, albCover);
+            if (mapped && !collectedMap.has(mapped.id)) {
+              collectedMap.set(mapped.id, mapped);
+            }
+          });
+        });
+      } else {
+        logDiag(`/me/albums returned HTTP ${albumsRes.status}`, true);
+      }
+
+      // 3. Playlists (using February 2026 /playlists/{id}/items endpoint + item/track fallback)
+      if (playlistsRes.ok) {
+        const playlistsJson = await playlistsRes.json();
+        const rawPlaylists = playlistsJson.items || [];
+        logDiag(`/me/playlists returned ${rawPlaylists.length} Playlists.`);
+
+        state.playlists = rawPlaylists.map(p => ({
           id: p.id,
           uri: p.uri,
-          name: p.name,
-          count: p.tracks.total,
-          cover: (p.images && p.images[0]) ? p.images[0].url : DEMO_TRACKS[0].cover
+          name: p.name || 'Untitled Playlist',
+          ownerId: p.owner?.id || '',
+          count: p.items?.total ?? p.tracks?.total ?? 0,
+          cover: p.images?.[0]?.url || DEMO_TRACKS[0].cover
         }));
+
+        // If Liked Songs + Saved Albums returned fewer than 10 tracks, automatically pull tracks from user's playlists!
+        const userId = state.spotifyUser?.id;
+        const ownedPlaylists = state.playlists.filter(p => !userId || p.ownerId === userId).slice(0, 3);
+
+        if (collectedMap.size < 10 && ownedPlaylists.length > 0) {
+          logDiag(`Loading tracks from ${ownedPlaylists.length} owned playlist(s) via 2026 /items API...`);
+          for (const pl of ownedPlaylists) {
+            const plTracks = await fetchPlaylistItems2026(pl.id, token);
+            plTracks.forEach(t => {
+              if (!collectedMap.has(t.id)) collectedMap.set(t.id, t);
+            });
+          }
+        }
+      } else {
+        logDiag(`/me/playlists returned HTTP ${playlistsRes.status}`, true);
+      }
+
+      const finalTracks = Array.from(collectedMap.values());
+      if (finalTracks.length > 0) {
+        state.library = finalTracks;
+        state.queue = [...finalTracks];
+        state.currentIndex = 0;
+        logDiag(`SUCCESS: Loaded ${finalTracks.length} unique Spotify tracks into Zune Collection!`);
+      } else {
+        logDiag('WARNING: 0 tracks found across Liked Songs, Saved Albums, and owned Playlists.', true);
+        showSpotifyError(
+          '0 Spotify Tracks Found',
+          'Your Spotify account connected, but returned 0 Liked Songs, 0 Saved Albums, and 0 tracks in owned playlists. Like a few songs or create a playlist in Spotify, then tap Sync Library Now.'
+        );
       }
 
       renderAll();
       loadTrack(false);
+    }
+
+    async function fetchPlaylistItems2026(playlistId, token) {
+      const headers = { Authorization: `Bearer ${token}` };
+      // Spotify Feb 2026 endpoint: GET /v1/playlists/{playlist_id}/items
+      let res = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/items?limit=50`, { headers });
+      if (!res.ok) {
+        res = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=50`, { headers });
+      }
+      if (!res.ok) {
+        logDiag(`Playlist ${playlistId} items returned HTTP ${res.status}`, true);
+        return [];
+      }
+      const data = await res.json();
+      const entries = data.items || [];
+      const results = [];
+      entries.forEach(entry => {
+        // 2026 schema uses entry.item; legacy uses entry.track
+        const rawTrack = entry?.item || entry?.track;
+        const mapped = mapSpotifyTrackObj(rawTrack);
+        if (mapped) results.push(mapped);
+      });
+      return results;
     }
 
     function setupSpotifyWebPlayback(token) {
@@ -1049,7 +1430,16 @@
 
       player.addListener('ready', ({ device_id }) => {
         state.spotifyDeviceId = device_id;
+        logDiag(`Spotify Web Playback SDK ready (device: ${device_id.slice(0, 8)}...)`);
         showToast('Spotify Web Playback SDK Active');
+      });
+
+      player.addListener('initialization_error', ({ message }) => {
+        logDiag(`SDK Init Notice (iOS Safari fallback active): ${message}`);
+      });
+
+      player.addListener('account_error', ({ message }) => {
+        showSpotifyError('Spotify Premium Required', `Playback SDK requires Spotify Premium: ${message}`);
       });
 
       player.addListener('player_state_changed', s => {
@@ -1070,7 +1460,7 @@
         ? `https://api.spotify.com/v1/me/player/play?device_id=${state.spotifyDeviceId}`
         : `https://api.spotify.com/v1/me/player/play`;
       try {
-        await fetch(url, {
+        const res = await fetch(url, {
           method: 'PUT',
           headers: {
             Authorization: `Bearer ${state.spotifyToken}`,
@@ -1078,14 +1468,19 @@
           },
           body: JSON.stringify({ uris: [track.uri] })
         });
+        if (res.status === 404) {
+          showToast('Open Spotify app once on your phone to wake playback');
+          logDiag('HTTP 404 No active Spotify device. Open Spotify app on your phone once, then press Play.', true);
+        }
       } catch (e) {
-        console.warn('Spotify playback API error:', e);
+        logDiag('Playback error: ' + e.message, true);
       }
     }
 
     function disconnectSpotify(silent = false) {
       localStorage.removeItem('zune_mobile_spotify_token');
       localStorage.removeItem('zune_mobile_spotify_exp');
+      localStorage.removeItem('zune_mobile_spotify_refresh');
       if (state.spotifyPlayer) state.spotifyPlayer.disconnect();
 
       state.spotifyConnected = false;
@@ -1093,6 +1488,7 @@
       state.spotifyUser = null;
       state.library = [...DEMO_TRACKS];
       state.queue = [...DEMO_TRACKS];
+      state.playlists = [];
       state.currentIndex = 0;
 
       document.getElementById('audioModeBadge').textContent = 'demo synth';
@@ -1100,8 +1496,10 @@
       document.getElementById('spotifyConnPill').textContent = '● demo mode';
       document.getElementById('spotifyConnPill').style.color = 'var(--text-secondary)';
       document.getElementById('spotifyHubHeading').textContent = 'Sync Your Spotify Library';
-      document.getElementById('spotifyDisconnectBtn').classList.add('hidden');
+      document.getElementById('spotifyConnectedActions').classList.add('hidden');
+      document.getElementById('pwaHandoffBanner').classList.add('hidden');
 
+      logDiag('Disconnected Spotify. Restored Zune demo tracks.');
       renderAll();
       loadTrack(false);
       if (!silent) showToast('Disconnected Spotify · Demo Library restored');
@@ -1295,7 +1693,7 @@
         container.innerHTML = `
           <div class="space-y-2.5 pt-1">
             ${lists.map((p, idx) => `
-              <div onclick="${p.isDemo ? `startSmartMix(${idx === 1 ? "'favorites'" : "'all'"})` : `playSpotifyPlaylist('${p.uri}')`}"
+              <div onclick="${p.isDemo ? `startSmartMix(${idx === 1 ? "'favorites'" : "'all'"})` : `openSpotifyPlaylist('${p.id}', '${escapeStr(p.name)}', '${p.uri}')`}"
                    class="metro-tile flex items-center gap-3.5 p-2 border cursor-pointer"
                    style="background-color: var(--bg-tile); border-color: var(--border-metro);">
                 <img src="${p.cover}" alt="" class="w-14 h-14 object-cover shrink-0" />
@@ -1618,18 +2016,18 @@
       showToast('Shuffling all music');
     }
 
-    function startSmartMix(mode) {
-      let pool = [...state.library];
-      if (mode === 'favorites' && state.favorites.size > 0) {
-        pool = state.library.filter(t => state.favorites.has(t.id));
+    async function openSpotifyPlaylist(playlistId, playlistName, uri) {
+      if (!state.spotifyToken) return;
+      showToast(`Loading ${playlistName}...`);
+      const tracks = await fetchPlaylistItems2026(playlistId, state.spotifyToken);
+      if (tracks.length > 0) {
+        state.queue = tracks;
+        state.currentIndex = 0;
+        loadTrack(true);
+        switchPanorama(1);
       } else {
-        pool.sort(() => Math.random() - 0.5);
+        playSpotifyPlaylist(uri);
       }
-      state.queue = pool;
-      state.currentIndex = 0;
-      loadTrack(true);
-      switchPanorama(1);
-      showToast('Smart DJ Mix started');
     }
 
     async function playSpotifyPlaylist(uri) {
@@ -1779,8 +2177,8 @@
 
     window.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('redirectUriInput').value = getRedirectUri();
-      const savedCid = localStorage.getItem('zune_mobile_spotify_cid');
-      if (savedCid) document.getElementById('clientIdInput').value = savedCid;
+      const savedCid = localStorage.getItem('zune_mobile_spotify_cid') || 'aa5884864c9641b9b5a03f877dab5f0a';
+      document.getElementById('clientIdInput').value = savedCid;
 
       setCollectionTab('artists');
       switchPanorama(0);
